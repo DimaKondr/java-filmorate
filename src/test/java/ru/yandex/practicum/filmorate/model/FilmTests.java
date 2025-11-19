@@ -66,8 +66,8 @@ class FilmTests {
         assertFalse(violations1.isEmpty(), "Должны быть нарушения");
         assertFalse(violations2.isEmpty(), "Должны быть нарушения");
 
-        List<ConstraintViolation<Film>> violationsList1= violations1.stream().toList();
-        List<ConstraintViolation<Film>> violationsList2= violations2.stream().toList();
+        List<ConstraintViolation<Film>> violationsList1 = violations1.stream().toList();
+        List<ConstraintViolation<Film>> violationsList2 = violations2.stream().toList();
         String message1 = violationsList1.get(0).getMessage();
         String message2 = violationsList2.get(0).getMessage();
 
@@ -92,8 +92,8 @@ class FilmTests {
         assertFalse(violations1.isEmpty(), "Должны быть нарушения");
         assertFalse(violations2.isEmpty(), "Должны быть нарушения");
 
-        List<ConstraintViolation<Film>> violationsList1= violations1.stream().toList();
-        List<ConstraintViolation<Film>> violationsList2= violations2.stream().toList();
+        List<ConstraintViolation<Film>> violationsList1 = violations1.stream().toList();
+        List<ConstraintViolation<Film>> violationsList2 = violations2.stream().toList();
         String message1 = violationsList1.get(0).getMessage();
         String message2 = violationsList2.get(0).getMessage();
 
@@ -109,7 +109,7 @@ class FilmTests {
 
         assertFalse(violations.isEmpty(), "Должны быть нарушения");
 
-        List<ConstraintViolation<Film>> violationsList= violations.stream().toList();
+        List<ConstraintViolation<Film>> violationsList = violations.stream().toList();
         String message = violationsList.get(0).getMessage();
 
         assertEquals("Дата релиза не может быть null", message, "Неверное сообщение об ошибке");
@@ -132,9 +132,9 @@ class FilmTests {
         assertFalse(violations2.isEmpty(), "Должны быть нарушения");
         assertFalse(violations3.isEmpty(), "Должны быть нарушения");
 
-        List<ConstraintViolation<Film>> violationsList1= violations1.stream().toList();
-        List<ConstraintViolation<Film>> violationsList2= violations2.stream().toList();
-        List<ConstraintViolation<Film>> violationsList3= violations3.stream().toList();
+        List<ConstraintViolation<Film>> violationsList1 = violations1.stream().toList();
+        List<ConstraintViolation<Film>> violationsList2 = violations2.stream().toList();
+        List<ConstraintViolation<Film>> violationsList3 = violations3.stream().toList();
         String message1 = violationsList1.get(0).getMessage();
         String message2 = violationsList2.get(0).getMessage();
         String message3 = violationsList3.get(0).getMessage();

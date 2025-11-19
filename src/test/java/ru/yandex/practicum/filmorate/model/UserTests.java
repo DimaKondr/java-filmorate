@@ -52,8 +52,8 @@ class UserTests {
         assertFalse(violations1.isEmpty(), "Должны быть нарушения");
         assertFalse(violations2.isEmpty(), "Должны быть нарушения");
 
-        List<ConstraintViolation<User>> violationsList1= violations1.stream().toList();
-        List<ConstraintViolation<User>> violationsList2= violations2.stream().toList();
+        List<ConstraintViolation<User>> violationsList1 = violations1.stream().toList();
+        List<ConstraintViolation<User>> violationsList2 = violations2.stream().toList();
         String message1 = violationsList1.get(0).getMessage();
         String message2 = violationsList2.get(0).getMessage();
 
@@ -78,9 +78,9 @@ class UserTests {
         assertFalse(violations2.isEmpty(), "Должны быть нарушения");
         assertFalse(violations3.isEmpty(), "Должны быть нарушения");
 
-        List<ConstraintViolation<User>> violationsList1= violations1.stream().toList();
-        List<ConstraintViolation<User>> violationsList2= violations2.stream().toList();
-        List<ConstraintViolation<User>> violationsList3= violations3.stream().toList();
+        List<ConstraintViolation<User>> violationsList1 = violations1.stream().toList();
+        List<ConstraintViolation<User>> violationsList2 = violations2.stream().toList();
+        List<ConstraintViolation<User>> violationsList3 = violations3.stream().toList();
         String message1 = violationsList1.get(0).getMessage();
         String message2 = violationsList2.get(0).getMessage();
         String message3 = violationsList3.get(0).getMessage();
@@ -104,8 +104,8 @@ class UserTests {
         assertFalse(violations1.isEmpty(), "Должны быть нарушения");
         assertFalse(violations2.isEmpty(), "Должны быть нарушения");
 
-        List<ConstraintViolation<User>> violationsList1= violations1.stream().toList();
-        List<ConstraintViolation<User>> violationsList2= violations2.stream().toList();
+        List<ConstraintViolation<User>> violationsList1 = violations1.stream().toList();
+        List<ConstraintViolation<User>> violationsList2 = violations2.stream().toList();
         String message1 = violationsList1.get(0).getMessage();
         String message2 = violationsList2.get(0).getMessage();
 
