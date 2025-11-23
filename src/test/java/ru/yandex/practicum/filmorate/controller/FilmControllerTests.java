@@ -45,18 +45,6 @@ class FilmControllerTests {
     }
 
     @Test
-    void addFilmWithInvalidReleaseDateTesting() {
-        Film film = new Film(null, "Name of the film", "Description of the film",
-                LocalDate.of(1895, Month.DECEMBER, 27), 90L);
-
-        // Проверяем, что было выброшено необходимое исключение, так как некорректная дата релиза
-        ValidationException exception = assertThrows(ValidationException.class, () -> filmController.addFilm(film),
-                "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Дата релиза может быть раньше 28 декабря 1895 года",
-                exception.getMessage(), "Сообщения не совпадают");
-    }
-
-    @Test
     void updateValidFilmTesting() {
         Film filmForUpdate = new Film(null, "Name of the film", "Description of the film",
                 LocalDate.of(1895, Month.DECEMBER, 28), 1L);

@@ -24,12 +24,6 @@ public class FilmController {
             log.error("Запрос на добавление нового фильма поступил с пустым телом");
             throw new ValidationException("Запрос на добавление фильма поступил с пустым телом");
         }
-        log.info("Начат процесс добавления нового фильма. Проверяем корректность даты релиза");
-        LocalDate cinemaBirthDate = LocalDate.of(1895, Month.DECEMBER, 28);
-        if (film.getReleaseDate().isBefore(cinemaBirthDate)) {
-            log.error("Некорректная дата релиза (не ранее 28.12.1895г.): {}", film.getReleaseDate());
-            throw new ValidationException("Дата релиза может быть раньше 28 декабря 1895 года");
-        }
         film.setId(getNextId());
         log.debug("Новому фильму назначен ID: {}", film.getId());
         films.put(film.getId(), film);
@@ -57,7 +51,7 @@ public class FilmController {
                 oldFilm.setName(updatedFilm.getName());
             }
             if (!oldFilm.getDescription().equals(updatedFilm.getDescription())) {
-                log.debug("у фильма {} обновляем описание", updatedFilm.getDescription());
+                log.debug("Обновляем описание фильма: {}", updatedFilm.getDescription());
                 oldFilm.setDescription(updatedFilm.getDescription());
             }
             if (!oldFilm.getReleaseDate().isEqual(updatedFilm.getReleaseDate())

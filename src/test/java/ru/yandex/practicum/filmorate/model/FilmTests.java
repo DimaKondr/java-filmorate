@@ -40,9 +40,9 @@ class FilmTests {
         assertEquals(200, description200.length(), "Неверная длина описания");
 
         Film film1 = new Film(1L, "Тестовый фильм", "Очень интересное кино",
-                LocalDate.of(2000, Month.JANUARY, 15), 90L);
+                LocalDate.of(1895, Month.DECEMBER, 28), 90L);
         Film film2 = new Film(1L, "Тестовый фильм", "",
-                LocalDate.of(2000, Month.JANUARY, 15), 90L);
+                LocalDate.of(1895, Month.DECEMBER, 29), 90L);
         Film film3 = new Film(1L, "Тестовый фильм", description200,
                 LocalDate.of(2000, Month.JANUARY, 15), 90L);
         Set<ConstraintViolation<Film>> violations1 = validator.validate(film1);
@@ -103,16 +103,32 @@ class FilmTests {
 
     @Test
     void testInvalidReleaseDate() {
-        Film film = new Film(1L, "Тестовый фильм", "Очень интересное кино",
+        Film film1 = new Film(1L, "Тестовый фильм1", "Очень интересное кино",
                 null, 90L);
-        Set<ConstraintViolation<Film>> violations = validator.validate(film);
+        Film film2 = new Film(2L, "Тестовый фильм2", "Очень интересное кино",
+                LocalDate.of(1895, Month.DECEMBER, 27), 90L);
+        Film film3 = new Film(2L, "Тестовый фильм3", "Очень интересное кино",
+                LocalDate.of(1893, Month.MAY, 15), 90L);
+        Set<ConstraintViolation<Film>> violations1 = validator.validate(film1);
+        Set<ConstraintViolation<Film>> violations2 = validator.validate(film2);
+        Set<ConstraintViolation<Film>> violations3 = validator.validate(film3);
 
-        assertFalse(violations.isEmpty(), "Должны быть нарушения");
+        assertFalse(violations1.isEmpty(), "Должны быть нарушения");
+        assertFalse(violations2.isEmpty(), "Должны быть нарушения");
+        assertFalse(violations3.isEmpty(), "Должны быть нарушения");
 
-        List<ConstraintViolation<Film>> violationsList = violations.stream().toList();
-        String message = violationsList.get(0).getMessage();
+        List<ConstraintViolation<Film>> violationsList1 = violations1.stream().toList();
+        List<ConstraintViolation<Film>> violationsList2 = violations2.stream().toList();
+        List<ConstraintViolation<Film>> violationsList3 = violations3.stream().toList();
+        String message1 = violationsList1.get(0).getMessage();
+        String message2 = violationsList2.get(0).getMessage();
+        String message3 = violationsList3.get(0).getMessage();
 
-        assertEquals("Дата релиза не может быть null", message, "Неверное сообщение об ошибке");
+        assertEquals("Дата релиза не может быть null", message1, "Неверное сообщение об ошибке");
+        assertEquals("Дата релиза не может быть раньше 28 декабря 1895 года", message2,
+                "Неверное сообщение об ошибке");
+        assertEquals("Дата релиза не может быть раньше 28 декабря 1895 года", message3,
+                "Неверное сообщение об ошибке");
     }
 
     @Test
