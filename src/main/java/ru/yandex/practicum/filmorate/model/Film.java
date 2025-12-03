@@ -9,10 +9,13 @@ import lombok.Data;
 import ru.yandex.practicum.filmorate.annotations.ValidReleaseDate;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 @AllArgsConstructor
 public class Film {
+    private final Set<Long> filmLikedUsersId = new HashSet<>();
     private Long id;
 
     @NotBlank(message = "Название не может быть null или пустым")
@@ -28,4 +31,13 @@ public class Film {
     @NotNull(message = "Продолжительность не может быть null")
     @Min(value = 1, message = "Продолжительность фильма должна быть положительным числом")
     private Long duration;
+
+    public void addLike(Long userId) {
+        filmLikedUsersId.add(userId);
+    }
+
+    public void removeLike(Long userId) {
+        filmLikedUsersId.remove(userId);
+    }
+
 }
