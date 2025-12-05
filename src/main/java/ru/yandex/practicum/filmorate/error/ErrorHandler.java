@@ -1,4 +1,4 @@
-package ru.yandex.practicum.filmorate.controller;
+package ru.yandex.practicum.filmorate.error;
 
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
