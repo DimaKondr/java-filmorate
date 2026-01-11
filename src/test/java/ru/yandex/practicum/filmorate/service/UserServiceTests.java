@@ -1,30 +1,49 @@
 package ru.yandex.practicum.filmorate.service;
 
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
+import org.springframework.context.annotation.Import;
+import ru.yandex.practicum.filmorate.dao.friendship.FriendshipRowMapper;
+import ru.yandex.practicum.filmorate.dao.friendship.UserFriendshipDAO;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.model.UserFriendship;
+import ru.yandex.practicum.filmorate.storage.user.UserDbStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserRowMapper;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@JdbcTest
+@AutoConfigureTestDatabase
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
+@Import({
+        UserDbStorage.class,
+        UserFriendshipDAO.class,
+        UserService.class,
+        UserRowMapper.class,
+        FriendshipRowMapper.class
+        })
 class UserServiceTests {
-    UserStorage userStorage;
-    UserService userService;
+    private final UserService userService;
     User user1;
     User user2;
+    UserStorage userStorage;
 
     @BeforeEach
     void setUp() {
-        userStorage = new InMemoryUserStorage();
-        userService = new UserService(userStorage);
+        userStorage = userService.getUserStorage();
         user1 = new User(null, "testemail1@testemail.com", "TestLogin1", "TestName1",
                 LocalDate.of(2000, Month.JANUARY, 15));
         user2 = new User(null, "testemail2@testemail.com", "TestLogin2", "TestName2",
@@ -36,15 +55,20 @@ class UserServiceTests {
         User addedUser1 = userStorage.addUser(user1);
         User addedUser2 = userStorage.addUser(user2);
 
-        userService.addFriend(addedUser1.getId(), addedUser2.getId());
-        List<Long> friendsList1 = new ArrayList<>(addedUser1.getFriendsId());
-        List<Long> friendsList2 = new ArrayList<>(addedUser2.getFriendsId());
+        User updatedUser1 = userService.addFriend(addedUser1.getId(), addedUser2.getId());
+        User updatedUser2 = userService.addFriend(addedUser2.getId(), addedUser1.getId());
 
-        // Проверяем, что в обоих списках только один ID с нужным номером
+        List<User> friendsList1 = new ArrayList<>(userService.getFriendsListOfUser(addedUser1.getId()));
+        List<User> friendsList2 = new ArrayList<>(userService.getFriendsListOfUser(addedUser2.getId()));
+
+        UserFriendship test1 = userService.getFriendshipDAO().getFriendshipStatus(addedUser1, addedUser2);
+        UserFriendship test2 = userService.getFriendshipDAO().getFriendshipStatus(addedUser2, addedUser1);
+
+        // Проверяем, что в обоих списках нужные данные о дружбе
         assertEquals(1, friendsList1.size(), "Количество элементов не совпадает");
         assertEquals(1, friendsList2.size(), "Количество элементов не совпадает");
-        assertEquals(2, friendsList1.get(0), "ID не совпадает");
-        assertEquals(1, friendsList2.get(0), "ID не совпадает");
+        assertEquals(test1.getFriendId(), friendsList1.get(0).getId(), "Данные не совпадают");
+        assertEquals(test2.getFriendId(), friendsList2.get(0).getId(), "Данные не совпадают");
     }
 
     @Test
@@ -54,9 +78,9 @@ class UserServiceTests {
 
         // Проверяем, что было выброшено необходимое исключение, так как предоставлены одинаковые ID
         ValidationException exception = assertThrows(ValidationException.class,
-                () -> userService.addFriend(2L, addedUser2.getId()),
+                () -> userService.addFriend(addedUser2.getId(), addedUser2.getId()),
                 "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("ID=" + 2L + " пользователя и ID= "
+        assertEquals("ID=" + addedUser2.getId() + " пользователя и ID= "
                         + addedUser2.getId() + " друга для добавления совпадают",
                 exception.getMessage(), "Сообщения не совпадают");
     }
@@ -66,11 +90,14 @@ class UserServiceTests {
         User addedUser1 = userStorage.addUser(user1);
         User addedUser2 = userStorage.addUser(user2);
 
+        // Сгенерируем случайный ID
+        Long uniqueId = generateUniqueId(addedUser1.getId(), addedUser2.getId());
+
         // Проверяем, что было выброшено необходимое исключение, так как ID пользователя не найден
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userService.addFriend(3L, addedUser2.getId()),
+                () -> userService.addFriend(uniqueId, addedUser2.getId()),
                 "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Попытка получения пользователя. Пользователь с ID: " + 3L + " не найден",
+        assertEquals("Попытка получения пользователя. Пользователь с ID: " + uniqueId + " не найден",
                 exception.getMessage(), "Сообщения не совпадают");
     }
 
@@ -79,11 +106,14 @@ class UserServiceTests {
         User addedUser1 = userStorage.addUser(user1);
         User addedUser2 = userStorage.addUser(user2);
 
+        // Сгенерируем случайный ID
+        Long uniqueId = generateUniqueId(addedUser1.getId(), addedUser2.getId());
+
         // Проверяем, что было выброшено необходимое исключение, так как ID друга не найден
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userService.addFriend(addedUser1.getId(), 4L),
+                () -> userService.addFriend(addedUser1.getId(), uniqueId),
                 "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Попытка получения пользователя. Пользователь с ID: " + 4L + " не найден",
+        assertEquals("Попытка получения пользователя. Пользователь с ID: " + uniqueId + " не найден",
                 exception.getMessage(), "Сообщения не совпадают");
     }
 
@@ -93,13 +123,22 @@ class UserServiceTests {
         User addedUser2 = userStorage.addUser(user2);
 
         userService.addFriend(addedUser1.getId(), addedUser2.getId());
+        userService.addFriend(addedUser2.getId(), addedUser1.getId());
+        List<User> friendsList1 = new ArrayList<>(userService.getFriendsListOfUser(addedUser1.getId()));
+        List<User> friendsList2 = new ArrayList<>(userService.getFriendsListOfUser(addedUser2.getId()));
+
+        // Проверяем, что в списках по одному элементу
+        assertEquals(1, friendsList1.size(), "В списке не один элемент");
+        assertEquals(1, friendsList2.size(), "В списке не один элемент");
+
         userService.removeFriend(addedUser1.getId(), addedUser2.getId());
-        List<Long> friendsList1 = new ArrayList<>(addedUser1.getFriendsId());
-        List<Long> friendsList2 = new ArrayList<>(addedUser2.getFriendsId());
+        userService.removeFriend(addedUser2.getId(), addedUser1.getId());
+        List<User> friendsList3 = new ArrayList<>(userService.getFriendsListOfUser(addedUser1.getId()));
+        List<User> friendsList4 = new ArrayList<>(userService.getFriendsListOfUser(addedUser2.getId()));
 
         // Проверяем, что в оба списка пусты
-        assertTrue(friendsList1.isEmpty(), "Список не пуст");
-        assertTrue(friendsList2.isEmpty(), "Список не пуст");
+        assertTrue(friendsList3.isEmpty(), "Список не пуст");
+        assertTrue(friendsList4.isEmpty(), "Список не пуст");
     }
 
     @Test
@@ -110,9 +149,9 @@ class UserServiceTests {
 
         // Проверяем, что было выброшено необходимое исключение, так как предоставлены одинаковые ID
         ValidationException exception = assertThrows(ValidationException.class,
-                () -> userService.removeFriend(2L, addedUser2.getId()),
+                () -> userService.removeFriend(addedUser2.getId(), addedUser2.getId()),
                 "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("ID=" + 2L + " пользователя и ID= "
+        assertEquals("ID=" + addedUser2.getId() + " пользователя и ID= "
                         + addedUser2.getId() + " друга для добавления совпадают",
                 exception.getMessage(), "Сообщения не совпадают");
     }
@@ -123,11 +162,14 @@ class UserServiceTests {
         User addedUser2 = userStorage.addUser(user2);
         userService.addFriend(addedUser1.getId(), addedUser2.getId());
 
+        // Сгенерируем случайный ID
+        Long uniqueId = generateUniqueId(addedUser1.getId(), addedUser2.getId());
+
         // Проверяем, что было выброшено необходимое исключение, так как ID пользователя не найден
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userService.removeFriend(3L, addedUser2.getId()),
+                () -> userService.removeFriend(uniqueId, addedUser2.getId()),
                 "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Попытка получения пользователя. Пользователь с ID: " + 3L + " не найден",
+        assertEquals("Попытка получения пользователя. Пользователь с ID: " + uniqueId + " не найден",
                 exception.getMessage(), "Сообщения не совпадают");
     }
 
@@ -184,16 +226,30 @@ class UserServiceTests {
 
         userService.addFriend(addedUser1.getId(), addedUser2.getId());
         userService.addFriend(addedUser2.getId(), addedUser3.getId());
-        userService.addFriend(addedUser3.getId(), addedUser4.getId());
+        userService.addFriend(addedUser4.getId(), addedUser3.getId());
+        userService.addFriend(addedUser4.getId(), addedUser2.getId());
 
-        List<User> mutualFriendsList1 = userService.getMutualFriendsList(addedUser1.getId(), addedUser3.getId());
+        List<User> mutualFriendsList1 = userService.getMutualFriendsList(addedUser1.getId(), addedUser4.getId());
         List<User> mutualFriendsList2 = userService.getMutualFriendsList(addedUser2.getId(), addedUser4.getId());
 
-        // Проверяем, что в списках верное количество друзей и данные совпадают
+        // Проверяем, что в списках верное количество элементов и данные совпадают
         assertEquals(1, mutualFriendsList1.size(), "Количество элементов не совпадает");
         assertEquals(1, mutualFriendsList2.size(), "Количество элементов не совпадает");
-        assertEquals(2, mutualFriendsList1.get(0).getId(), "ID не совпадают");
-        assertEquals(3, mutualFriendsList2.get(0).getId(), "ID не совпадают");
+        assertEquals(addedUser2.getId(), mutualFriendsList1.get(0).getId(), "ID не совпадают");
+        assertEquals(addedUser3.getId(), mutualFriendsList2.get(0).getId(), "ID не совпадают");
+    }
+
+    // Вспомогательный метод для генерации случайного ID, которого не должно быть в базе
+    Long generateUniqueId(Long id1, Long id2) {
+        Random random = new Random();
+        long uniqueId;
+        while (true) {
+            long result = random.nextLong();
+            if (result != id1 && result != id2) {
+                uniqueId = result;
+                return uniqueId;
+            }
+        }
     }
 
 }
