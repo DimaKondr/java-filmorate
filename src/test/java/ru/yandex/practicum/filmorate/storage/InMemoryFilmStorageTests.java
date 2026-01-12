@@ -151,7 +151,7 @@ class InMemoryFilmStorageTests {
         filmStorage.addFilm(film3);
         List<Film> allFilms = filmStorage.getAllFilms();
 
-        // Проверяем, что список существует, а также количество пользователей
+        // Проверяем, что список существует, а также количество фильмов
         assertNotNull(allFilms);
         assertEquals(3, allFilms.size(), "Неверное количество элементов в списке");
 

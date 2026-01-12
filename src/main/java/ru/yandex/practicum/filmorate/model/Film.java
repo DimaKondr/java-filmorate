@@ -4,8 +4,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Autowired;
 import ru.yandex.practicum.filmorate.annotations.ValidReleaseDate;
 
 import java.time.LocalDate;
@@ -13,9 +13,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Data
-@AllArgsConstructor
 public class Film {
+    private final Set<FilmGenre> genres = new HashSet<>();
     private final Set<Long> filmLikedUsersId = new HashSet<>();
+    private final FilmAgeRating mpa = new FilmAgeRating();
     private Long id;
 
     @NotBlank(message = "Название не может быть null или пустым")
@@ -32,12 +33,12 @@ public class Film {
     @Min(value = 1, message = "Продолжительность фильма должна быть положительным числом")
     private Long duration;
 
-    public void addLike(Long userId) {
-        filmLikedUsersId.add(userId);
+    @Autowired
+    public Film(Long id, String name, String description, LocalDate releaseDate, Long duration) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.releaseDate = releaseDate;
+        this.duration = duration;
     }
-
-    public void removeLike(Long userId) {
-        filmLikedUsersId.remove(userId);
-    }
-
 }

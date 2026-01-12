@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
@@ -16,7 +15,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/films")
-@Slf4j
 @Validated
 public class FilmController {
     private final FilmService filmService;

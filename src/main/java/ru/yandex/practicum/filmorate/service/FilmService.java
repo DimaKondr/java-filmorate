@@ -3,15 +3,15 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.dao.like.LikeDAO;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 @Service
 @Getter
@@ -19,23 +19,20 @@ import java.util.TreeMap;
 public class FilmService {
     private final FilmStorage filmStorage;
     private final UserService userService;
+    private final LikeDAO likeDAO;
 
     @Autowired
-    public FilmService(FilmStorage filmStorage, UserService userService) {
+    public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage, UserService userService, LikeDAO likeDAO) {
         this.filmStorage = filmStorage;
         this.userService = userService;
+        this.likeDAO = likeDAO;
     }
 
     public Film addLike(Long likedFilmId, Long userId) {
         log.info("Начат процесс добавления нового лайка.");
-        try {
-            userService.getUserStorage().getUserById(userId);
-        } catch (NotFoundException e) {
-            throw new NotFoundException("Пользователь с ID: "
-                    + userId + " не найден. Невозможно поставить лайк фильму");
-        }
+        User user = userService.getUserStorage().getUserById(userId);
         Film film = filmStorage.getFilmById(likedFilmId);
-        film.addLike(userId);
+        likeDAO.addLikeToFilm(film, user.getId());
         return film;
     }
 
@@ -48,22 +45,18 @@ public class FilmService {
                     + userId + " не найден. Невозможно удалить лайк у фильма");
         }
         Film film = filmStorage.getFilmById(unlikedFilmId);
-        film.removeLike(userId);
+        likeDAO.removeLikeFromFilm(film, userId);
         return film;
     }
 
     public List<Film> getMostPopularFilms(Long mostPopularFilmCount) {
-        log.info("Начат процесс получения списка наиболее популярных фильмов.");
-        Map<Long, Long> sortedByLikeFilms = new TreeMap<>(Comparator.reverseOrder());
-        for (Film film : filmStorage.getAllFilms()) {
-            if (!film.getFilmLikedUsersId().isEmpty()) {
-                sortedByLikeFilms.put((long) film.getFilmLikedUsersId().size(), film.getId());
-            }
+        List<Long> idOfMostPopularFilms = likeDAO.getIdOfMostPopularFilms(mostPopularFilmCount);
+        List<Film> mostPopularFilms = new ArrayList<>();
+
+        for (Long id : idOfMostPopularFilms) {
+            mostPopularFilms.add(filmStorage.getFilmById(id));
         }
-        return sortedByLikeFilms.values().stream()
-                .map(filmStorage::getFilmById)
-                .limit(mostPopularFilmCount)
-                .toList();
+        return mostPopularFilms;
     }
 
 }

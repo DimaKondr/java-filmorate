@@ -3,24 +3,26 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.dao.friendship.FriendshipDAO;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Service
 @Getter
 @Slf4j
 public class UserService {
     private final UserStorage userStorage;
+    private final FriendshipDAO friendshipDAO;
 
     @Autowired
-    public UserService(UserStorage userStorage) {
+    public UserService(@Qualifier("userDbStorage") UserStorage userStorage, FriendshipDAO friendshipDAO) {
         this.userStorage = userStorage;
+        this.friendshipDAO = friendshipDAO;
     }
 
     public User addFriend(Long userId, Long addedFriendsId) {
@@ -32,11 +34,8 @@ public class UserService {
         }
         User user = userStorage.getUserById(userId);
         User addedFriend = userStorage.getUserById(addedFriendsId);
-        log.info("Начат процесс взаимного добавления в список друзей у пользователей с ID = {} и ID = {}",
-                userId, addedFriendsId);
-        user.addFriend(addedFriendsId);
-        addedFriend.addFriend(userId);
-        return addedFriend;
+        log.info("Начат процесс добавления друга с ID: {} к пользователю с ID: {}.", addedFriendsId, userId);
+        return friendshipDAO.addFriendToUser(user, addedFriend);
     }
 
     public User removeFriend(Long userId, Long removedFriendsId) {
@@ -48,37 +47,26 @@ public class UserService {
         }
         User user = userStorage.getUserById(userId);
         User removedFriend = userStorage.getUserById(removedFriendsId);
-        log.info("Начат процесс взаимного удаления из списка друзей у пользователей с ID = {} и ID = {}",
-                userId, removedFriendsId);
-        user.removeFriend(removedFriendsId);
-        removedFriend.removeFriend(userId);
-        return removedFriend;
+        log.info("Начат процесс удаления друга с ID: {} у пользователя с ID: {}.", removedFriendsId, userId);
+        return friendshipDAO.removeFriendFromUser(user, removedFriend);
     }
 
     public List<User> getFriendsListOfUser(Long userId) {
         log.info("Начат процесс получения списка друзей пользователя с ID {}.", userId);
         User user = userStorage.getUserById(userId);
-        Set<Long> friendsId = user.getFriendsId();
-        return friendsId.stream()
-                .map(userStorage::getUserById)
-                .toList();
+        return friendshipDAO.getFriendsList(user);
     }
 
     public List<User> getMutualFriendsList(Long firstUserId, Long secondUserId) {
-        log.info("Начат процесс получения списка общих друзей.");
+        log.info("Начат процесс получения списка общих друзей пользователей с ID = {} и ID = {}",
+                firstUserId, secondUserId);
         if (firstUserId.equals(secondUserId)) {
             log.error("ID {} и ID {} обоих пользователей совпадают", firstUserId, secondUserId);
             throw new ValidationException("ID обоих пользователей совпадают");
         }
         User firstUser = userStorage.getUserById(firstUserId);
         User secondUser = userStorage.getUserById(secondUserId);
-        log.info("Начат процесс получения списка общих друзей пользователей с ID = {} и ID = {}",
-                firstUserId, secondUserId);
-        Set<Long> mutualFriendsId = new HashSet<>(firstUser.getFriendsId());
-        mutualFriendsId.retainAll(secondUser.getFriendsId());
-        return mutualFriendsId.stream()
-                        .map(userStorage::getUserById)
-                        .toList();
+        return friendshipDAO.getMutualFriendsList(firstUser, secondUser);
     }
 
 }
