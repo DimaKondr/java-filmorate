@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.SortType;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.util.List;
@@ -87,4 +88,9 @@ public class FilmController {
         return filmService.getMostPopularFilms(mostPopularFilmCount);
     }
 
+    @GetMapping("director/{directorId}")
+    public List<Film> getFilmsByDirector(@PathVariable Long directorId,
+                                         @RequestParam(name = "sortBy", defaultValue = "year") String sortBy) {
+        return filmService.getFilmsByDirector(directorId, SortType.valueOf(sortBy.toUpperCase()));
+    }
 }
