@@ -191,8 +191,8 @@ class FilmServiceTests {
 
         List<Film> result = filmService.getMostPopularFilms(100L);
 
-        // Проверяем, что в списке изначально нет элементов, так как у всех фильмов списки лайков пустые
-        assertTrue(result.isEmpty(), "Список не пуст");
+        // Проверяем, что в списке есть 3 фильма (все добавленные, даже без лайков)
+        assertEquals(3, result.size(), "Количество элементов не совпадает");
 
         Film film1 = filmStorage.getFilmById(addedFilmsId.get(0));
         for (int i = 0; i < 2; i++) {
