@@ -5,9 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAO;
 import ru.yandex.practicum.filmorate.dao.like.LikeDAO;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Operation;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
@@ -20,12 +22,14 @@ public class FilmService {
     private final FilmStorage filmStorage;
     private final UserService userService;
     private final LikeDAO likeDAO;
+    private final UserFeedDAO userFeedDAO;
 
     @Autowired
-    public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage, UserService userService, LikeDAO likeDAO) {
+    public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage, UserService userService, LikeDAO likeDAO, UserFeedDAO userFeedDAO) {
         this.filmStorage = filmStorage;
         this.userService = userService;
         this.likeDAO = likeDAO;
+        this.userFeedDAO = userFeedDAO;
     }
 
     public Film addLike(Long likedFilmId, Long userId) {
@@ -33,6 +37,7 @@ public class FilmService {
         User user = userService.getUserStorage().getUserById(userId);
         Film film = filmStorage.getFilmById(likedFilmId);
         likeDAO.addLikeToFilm(film, user.getId());
+        userFeedDAO.addLikeEvent(userId, likedFilmId, Operation.ADD);
         return film;
     }
 
@@ -46,6 +51,7 @@ public class FilmService {
         }
         Film film = filmStorage.getFilmById(unlikedFilmId);
         likeDAO.removeLikeFromFilm(film, userId);
+        userFeedDAO.addLikeEvent(userId, unlikedFilmId, Operation.REMOVE);
         return film;
     }
 
