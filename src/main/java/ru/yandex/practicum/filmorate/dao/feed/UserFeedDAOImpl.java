@@ -7,13 +7,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
-import ru.yandex.practicum.filmorate.exception.DataBaseException;
 import ru.yandex.practicum.filmorate.model.EventType;
 import ru.yandex.practicum.filmorate.model.Operation;
 import ru.yandex.practicum.filmorate.model.UserFeed;
 
 import java.sql.PreparedStatement;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 
 @Repository
@@ -30,7 +30,7 @@ public class UserFeedDAOImpl implements UserFeedDAO {
 
         try {
             KeyHolder keyHolder = new GeneratedKeyHolder();
-            jdbc.update(connection -> {
+            int rows = jdbc.update(connection -> {
                 PreparedStatement stmt = connection.prepareStatement(query, new String[]{"event_id"});
                 stmt.setLong(1, event.getTimestamp());
                 stmt.setLong(2, event.getUserId());
@@ -40,14 +40,16 @@ public class UserFeedDAOImpl implements UserFeedDAO {
                 return stmt;
             }, keyHolder);
 
-            Long eventId = keyHolder.getKeyAs(Long.class);
-            if (eventId != null) {
-                event.setEventId(eventId);
-                log.debug("Добавлено событие с ID: {}", eventId);
+            if (rows > 0) {
+                Long eventId = keyHolder.getKeyAs(Long.class);
+                if (eventId != null) {
+                    event.setEventId(eventId);
+                    log.debug("Добавлено событие с ID: {}", eventId);
+                }
             }
         } catch (DataAccessException e) {
             log.error("Ошибка при добавлении события в ленту: {}", e.getMessage());
-            throw new DataBaseException("Не удалось добавить событие в ленту");
+            // Не бросаем исключение, чтобы не ломать основной функционал
         }
     }
 
@@ -62,13 +64,17 @@ public class UserFeedDAOImpl implements UserFeedDAO {
             return feed;
         } catch (DataAccessException e) {
             log.error("Ошибка при получении ленты событий пользователя с ID: {}: {}", userId, e.getMessage());
-            return List.of();
+            // Возвращаем пустой список вместо исключения
+            return Collections.emptyList();
         }
     }
 
     @Override
     public void addLikeEvent(Long userId, Long entityId, Operation operation) {
         try {
+            log.info("Добавление события LIKE: userId={}, entityId={}, operation={}",
+                    userId, entityId, operation);
+
             UserFeed event = new UserFeed();
             event.setTimestamp(Instant.now().toEpochMilli());
             event.setUserId(userId);
@@ -77,8 +83,6 @@ public class UserFeedDAOImpl implements UserFeedDAO {
             event.setEntityId(entityId);
 
             addEvent(event);
-            log.info("Добавлено событие LIKE: пользователь {} {} лайк фильму {}",
-                    userId, operation, entityId);
         } catch (Exception e) {
             log.error("Ошибка при добавлении события LIKE: {}", e.getMessage());
         }
@@ -87,6 +91,9 @@ public class UserFeedDAOImpl implements UserFeedDAO {
     @Override
     public void addFriendEvent(Long userId, Long entityId, Operation operation) {
         try {
+            log.info("Добавление события FRIEND: userId={}, entityId={}, operation={}",
+                    userId, entityId, operation);
+
             UserFeed event = new UserFeed();
             event.setTimestamp(Instant.now().toEpochMilli());
             event.setUserId(userId);
@@ -95,8 +102,6 @@ public class UserFeedDAOImpl implements UserFeedDAO {
             event.setEntityId(entityId);
 
             addEvent(event);
-            log.info("Добавлено событие FRIEND: пользователь {} {} друга {}",
-                    userId, operation, entityId);
         } catch (Exception e) {
             log.error("Ошибка при добавлении события FRIEND: {}", e.getMessage());
         }
