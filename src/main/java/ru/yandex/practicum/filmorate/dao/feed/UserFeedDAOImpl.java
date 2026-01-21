@@ -57,39 +57,48 @@ public class UserFeedDAOImpl implements UserFeedDAO {
 
         try {
             log.info("Получение ленты событий пользователя с ID: {}", userId);
-            return jdbc.query(query, rowMapper, userId);
+            List<UserFeed> feed = jdbc.query(query, rowMapper, userId);
+            log.info("Найдено {} событий для пользователя с ID: {}", feed.size(), userId);
+            return feed;
         } catch (DataAccessException e) {
-            log.error("Ошибка при получении ленты событий пользователя с ID: {}", userId);
-            throw new DataBaseException("Не удалось получить ленту событий");
+            log.error("Ошибка при получении ленты событий пользователя с ID: {}: {}", userId, e.getMessage());
+            return List.of();
         }
     }
 
     @Override
     public void addLikeEvent(Long userId, Long entityId, Operation operation) {
-        UserFeed event = new UserFeed();
-        event.setTimestamp(Instant.now().toEpochMilli());
-        event.setUserId(userId);
-        event.setEventType(EventType.LIKE);
-        event.setOperation(operation);
-        event.setEntityId(entityId);
+        try {
+            UserFeed event = new UserFeed();
+            event.setTimestamp(Instant.now().toEpochMilli());
+            event.setUserId(userId);
+            event.setEventType(EventType.LIKE);
+            event.setOperation(operation);
+            event.setEntityId(entityId);
 
-        addEvent(event);
-        log.info("Добавлено событие LIKE: пользователь {} {} лайк фильму {}",
-                userId, operation, entityId);
+            addEvent(event);
+            log.info("Добавлено событие LIKE: пользователь {} {} лайк фильму {}",
+                    userId, operation, entityId);
+        } catch (Exception e) {
+            log.error("Ошибка при добавлении события LIKE: {}", e.getMessage());
+        }
     }
 
     @Override
     public void addFriendEvent(Long userId, Long entityId, Operation operation) {
-        UserFeed event = new UserFeed();
-        event.setTimestamp(Instant.now().toEpochMilli());
-        event.setUserId(userId);
-        event.setEventType(EventType.FRIEND);
-        event.setOperation(operation);
-        event.setEntityId(entityId);
+        try {
+            UserFeed event = new UserFeed();
+            event.setTimestamp(Instant.now().toEpochMilli());
+            event.setUserId(userId);
+            event.setEventType(EventType.FRIEND);
+            event.setOperation(operation);
+            event.setEntityId(entityId);
 
-        addEvent(event);
-        log.info("Добавлено событие FRIEND: пользователь {} {} друга {}",
-                userId, operation, entityId);
-
+            addEvent(event);
+            log.info("Добавлено событие FRIEND: пользователь {} {} друга {}",
+                    userId, operation, entityId);
+        } catch (Exception e) {
+            log.error("Ошибка при добавлении события FRIEND: {}", e.getMessage());
+        }
     }
 }

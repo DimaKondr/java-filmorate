@@ -47,6 +47,8 @@ public class UserService {
 
         userFeedDAO.addFriendEvent(userId, addedFriendsId, Operation.ADD);
 
+        userFeedDAO.addFriendEvent(addedFriendsId, userId, Operation.ADD);
+
         return result;
     }
 
@@ -91,6 +93,9 @@ public class UserService {
 
         userStorage.getUserById(userId);
 
-        return userFeedDAO.getFeedByUserId(userId);
+        List<UserFeed> feed = userFeedDAO.getFeedByUserId(userId);
+
+        log.info("Найдено {} событий для пользователя с ID: {}", feed.size(), userId);
+        return feed;
     }
 }
