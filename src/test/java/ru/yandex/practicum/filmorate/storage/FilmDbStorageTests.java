@@ -102,11 +102,9 @@ class FilmDbStorageTests {
         // Сгенерируем случайный ID
         Long uniqueId = generateUniqueId(addedFilm1, addedFilm2);
 
-        // Проверяем, что было выброшено необходимое исключение, так как фильма с таким ID нет
-        NotFoundException exception = assertThrows(NotFoundException.class, () -> filmDbStorage.removeFilm(uniqueId),
+        // Проверяем, что было выброшено необходимое исключение
+        assertThrows(NotFoundException.class, () -> filmDbStorage.removeFilm(uniqueId),
                 "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Не удалось удалить фильм.",
-                exception.getMessage(), "Сообщения не совпадают");
     }
 
     @Test

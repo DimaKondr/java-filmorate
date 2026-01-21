@@ -101,11 +101,14 @@ public class FilmLikeDAO implements LikeDAO {
 
     @Override
     public List<Long> getIdOfMostPopularFilms(Long mostPopularFilmCount) {
-        String query = "SELECT film_id " +
-                "FROM film_likes " +
-                "GROUP BY film_id " +
-                "ORDER BY COUNT(user_id) DESC " +
-                "LIMIT ?";
+        String query = """
+            SELECT f.id
+            FROM films f
+            LEFT JOIN film_likes fl ON f.id = fl.film_id
+            GROUP BY f.id
+            ORDER BY COUNT(fl.user_id) DESC, f.id ASC
+            LIMIT ?
+            """;
 
         try {
             log.info("Начат процесс получения ID у {} самых популярных фильмов.", mostPopularFilmCount);
@@ -113,10 +116,10 @@ public class FilmLikeDAO implements LikeDAO {
 
             if (idOfMostPopularFilms.isEmpty()) {
                 log.info("Набор ID у {} самых популярных фильмов пуст.", mostPopularFilmCount);
-            } else if (idOfMostPopularFilms.size() != mostPopularFilmCount) {
-                log.debug("Запрошено {} самых популярных фильмов. В базе найдено {} фильмов с лайками. " +
-                        "Предоставлен набор ID у {} самых популярных фильмов.", mostPopularFilmCount,
-                        idOfMostPopularFilms.size(), mostPopularFilmCount);
+            } else if (idOfMostPopularFilms.size() < mostPopularFilmCount) {
+                log.debug("Запрошено {} самых популярных фильмов. В базе найдено {} фильмов. " +
+                                "Предоставлен набор ID у {} самых популярных фильмов.", mostPopularFilmCount,
+                        idOfMostPopularFilms.size(), idOfMostPopularFilms.size());
             } else {
                 log.debug("Набор ID у {} самых популярных фильмов успешно предоставлен.", mostPopularFilmCount);
             }

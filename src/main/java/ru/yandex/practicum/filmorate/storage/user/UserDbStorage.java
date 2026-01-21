@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.dao.friendship.FriendshipDAO;
 import ru.yandex.practicum.filmorate.exception.DataBaseException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
@@ -89,36 +90,21 @@ public class UserDbStorage implements UserStorage {
     }
 
     @Override
+    @Transactional
     public User removeUser(Long userId) {
-        String query = "DELETE FROM users WHERE id = ?";
+        log.info("Удаление пользователя с ID: {}", userId);
+
+        User user = getUserById(userId);
 
         try {
-            log.info("Начат процесс удаления пользователя с ID: {}", userId);
-            User removedUser = null;
-            try {
-                removedUser = getUserById(userId);
-            } catch (NotFoundException e) {
-                log.error("В процессе удаления пользователя не удалось его получить по ID: {}. --> {}",
-                        userId, e.getMessage());
-                throw new NotFoundException("Не удалось удалить пользователя.");
-            }
-
-            int affectedRows = jdbc.update(query, userId);
-            if (affectedRows != 1) {
-                log.error("При удалении пользователя должна быть обработана 1 строка, а обработано {} строк.",
-                        affectedRows);
-                throw new DataBaseException("Не удалось удалить пользователя.");
-            }
-            log.info("Пользователь с ID: {} успешно удален.", userId);
-
-            if (!removedUser.getFriendships().isEmpty()) {
-                friendshipDAO.removeUserFromFriends(removedUser);
-            }
-            return removedUser;
+            jdbc.update("DELETE FROM users WHERE id = ?", userId);
         } catch (DataAccessException e) {
-            log.error("Неудачная попытка удаления пользователя с ID: {}. --> {}", userId, e.getMessage());
-            throw new DataBaseException("Не удалось удалить пользователя.");
+            log.error("Ошибка БД при удалении пользователя {}: {}", userId, e.getMessage());
+            throw new DataBaseException("Не удалось удалить пользователя");
         }
+
+        log.info("Пользователь с ID: {} удален", userId);
+        return user;
     }
 
     @Override
