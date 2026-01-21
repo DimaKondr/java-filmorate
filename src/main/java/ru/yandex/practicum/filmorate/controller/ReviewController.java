@@ -1,122 +1,104 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Review;
+import ru.yandex.practicum.filmorate.service.ReviewService;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
 @RequestMapping("/reviews")
+@Validated
 public class ReviewController {
+    private final ReviewService reviewService;
 
-    // Храним "отзывы" в памяти для заглушки
-    private final List<Review> reviews = new ArrayList<>();
-    private Long nextId = 1L;
+    @Autowired
+    public ReviewController(ReviewService reviewService) {
+        this.reviewService = reviewService;
+    }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.OK)
-    public Review addReview(@Valid @RequestBody Review review) {
-        // Создаем копию с ID
-        Review newReview = new Review(
-                nextId++,
-                review.getContent(),
-                review.getIsPositive(),
-                review.getUserId(),
-                review.getFilmId(),
-                0L
-        );
-        reviews.add(newReview);
-        return newReview;
+    @ResponseStatus(HttpStatus.CREATED)
+    public Review addReviewToFilm(@Valid @RequestBody Review review) {
+        return reviewService.getReviewStorage().addReview(review);
     }
 
     @PutMapping
-    @ResponseStatus(HttpStatus.OK)
-    public Review updateReview(@Valid @RequestBody Review review) {
-        // Просто возвращаем тот же отзыв
-        return review;
+    public Review updateReviewOfFilm(@Valid @RequestBody Review updatedReview) {
+        return reviewService.getReviewStorage().updateReview(updatedReview);
     }
 
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    public void deleteReview(@PathVariable Long id) {
-        // Ничего не делаем, просто возвращаем 200
+    public Review removeReviewFromFilm(@PathVariable("id")
+                                   @NotNull(message = "id не может быть null")
+                                   @Min(value = 1, message = "id должен быть положительным целым числом")
+                                   @Valid Long removedReviewId) {
+        return reviewService.getReviewStorage().removeReview(removedReviewId);
     }
 
     @GetMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    public Review getReview(@PathVariable Long id) {
-        // Возвращаем заглушку
-        return new Review(
-                id,
-                "Test review content",
-                true,
-                1L,
-                1L,
-                0L
-        );
+    public Review getReview(@PathVariable("id")
+                                      @NotNull(message = "id не может быть null")
+                                      @Min(value = 1, message = "id должен быть положительным целым числом")
+                                      @Valid Long reviewId) {
+        return reviewService.getReviewStorage().getReviewById(reviewId);
     }
 
     @GetMapping
-    @ResponseStatus(HttpStatus.OK)
-    public List<Review> getReviewsByFilmId(
-            @RequestParam(required = false) Long filmId,
-            @RequestParam(defaultValue = "10") Integer count) {
-
-        List<Review> result = new ArrayList<>();
-        if (filmId != null) {
-            // Возвращаем отзывы для конкретного фильма
-            for (int i = 0; i < Math.min(count, 3); i++) {
-                result.add(new Review(
-                        (long) (i + 1),
-                        "Review for film " + filmId + " - " + (i + 1),
-                        i % 2 == 0,
-                        1L,
-                        filmId,
-                        (long) i * 10
-                ));
-            }
-        } else {
-            // Возвращаем все отзывы
-            result.addAll(reviews);
-            if (result.isEmpty()) {
-                // Если нет отзывов, возвращаем заглушку
-                result.add(new Review(
-                        1L,
-                        "Test review",
-                        true,
-                        1L,
-                        1L,
-                        5L
-                ));
-            }
-        }
-        return result;
+    public List<Review> getReviewsOfFilm(@RequestParam(name = "filmId", required = false, defaultValue = "0")
+                                             Long filmId,
+                                         @RequestParam(name = "count", required = false, defaultValue = "10")
+                                             @Positive(message = "count должен быть больше 0")
+                                             @Valid
+                                             Long count) {
+        return reviewService.getReviewStorage().getReviews(filmId, count);
     }
 
     @PutMapping("/{id}/like/{userId}")
-    @ResponseStatus(HttpStatus.OK)
-    public void addLike(@PathVariable Long id, @PathVariable Long userId) {
-        // Ничего не делаем
+    public Review addLikeToReview(@PathVariable("id")
+                                      @NotNull(message = "id не может быть null")
+                                      @Valid Long reviewId,
+                                  @PathVariable("userId")
+                                      @NotNull(message = "userId не может быть null")
+                                      @Valid Long userId) {
+        return reviewService.addLike(reviewId, userId);
     }
 
     @PutMapping("/{id}/dislike/{userId}")
-    @ResponseStatus(HttpStatus.OK)
-    public void addDislike(@PathVariable Long id, @PathVariable Long userId) {
-        // Ничего не делаем
+    public Review addDislikeToReview(@PathVariable("id")
+                                         @NotNull(message = "id не может быть null")
+                                         @Valid Long reviewId,
+                                     @PathVariable("userId")
+                                         @NotNull(message = "userId не может быть null")
+                                         @Valid Long userId) {
+        return reviewService.addDislike(reviewId, userId);
     }
 
     @DeleteMapping("/{id}/like/{userId}")
-    @ResponseStatus(HttpStatus.OK)
-    public void removeLike(@PathVariable Long id, @PathVariable Long userId) {
-        // Ничего не делаем
+    public Review removeLikeFromReview(@PathVariable("id")
+                                           @NotNull(message = "id не может быть null")
+                                           @Valid Long reviewId,
+                                       @PathVariable("userId")
+                                           @NotNull(message = "userId не может быть null")
+                                           @Valid Long userId) {
+        return reviewService.removeLike(reviewId, userId);
     }
 
     @DeleteMapping("/{id}/dislike/{userId}")
-    @ResponseStatus(HttpStatus.OK)
-    public void removeDislike(@PathVariable Long id, @PathVariable Long userId) {
-        // Ничего не делаем
+    public Review removeDislikeFromReview(@PathVariable("id")
+                                              @NotNull(message = "id не может быть null")
+                                              @Valid Long reviewId,
+                                          @PathVariable("userId")
+                                              @NotNull(message = "userId не может быть null")
+                                              @Valid Long userId) {
+        return reviewService.removeDislike(reviewId, userId);
     }
+
 }
