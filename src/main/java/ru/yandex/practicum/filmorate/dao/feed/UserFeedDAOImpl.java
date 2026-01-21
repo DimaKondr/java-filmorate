@@ -102,6 +102,7 @@ public class UserFeedDAOImpl implements UserFeedDAO {
             event.setEntityId(entityId);
 
             addEvent(event);
+
         } catch (Exception e) {
             log.error("Ошибка при добавлении события FRIEND: {}", e.getMessage());
         }

@@ -47,8 +47,6 @@ public class UserService {
 
         userFeedDAO.addFriendEvent(userId, addedFriendsId, Operation.ADD);
 
-        userFeedDAO.addFriendEvent(addedFriendsId, userId, Operation.ADD);
-
         return result;
     }
 
@@ -91,7 +89,9 @@ public class UserService {
     public List<UserFeed> getFeedByUserId(Long userId) {
         log.info("Получение ленты событий пользователя с ID: {}", userId);
 
+
         userStorage.getUserById(userId);
+
 
         List<UserFeed> feed = userFeedDAO.getFeedByUserId(userId);
 

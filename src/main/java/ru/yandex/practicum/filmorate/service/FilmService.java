@@ -25,7 +25,10 @@ public class FilmService {
     private final UserFeedDAO userFeedDAO;
 
     @Autowired
-    public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage, UserService userService, LikeDAO likeDAO, UserFeedDAO userFeedDAO) {
+    public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage,
+                       UserService userService,
+                       LikeDAO likeDAO,
+                       UserFeedDAO userFeedDAO) {
         this.filmStorage = filmStorage;
         this.userService = userService;
         this.likeDAO = likeDAO;
@@ -37,7 +40,9 @@ public class FilmService {
         User user = userService.getUserStorage().getUserById(userId);
         Film film = filmStorage.getFilmById(likedFilmId);
         likeDAO.addLikeToFilm(film, user.getId());
+
         userFeedDAO.addLikeEvent(userId, likedFilmId, Operation.ADD);
+
         return film;
     }
 
@@ -51,7 +56,9 @@ public class FilmService {
         }
         Film film = filmStorage.getFilmById(unlikedFilmId);
         likeDAO.removeLikeFromFilm(film, userId);
+
         userFeedDAO.addLikeEvent(userId, unlikedFilmId, Operation.REMOVE);
+
         return film;
     }
 
@@ -64,5 +71,4 @@ public class FilmService {
         }
         return mostPopularFilms;
     }
-
 }

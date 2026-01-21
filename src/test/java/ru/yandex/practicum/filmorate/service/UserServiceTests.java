@@ -34,8 +34,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @Import({
         UserDbStorage.class,
         UserFriendshipDAO.class,
-        UserFeedDAOImpl.class,      // ← ДОБАВЛЯЕМ
-        UserFeedRowMapper.class,    // ← ДОБАВЛЯЕМ
+        UserFeedDAOImpl.class,
+        UserFeedRowMapper.class,
         UserService.class,
         UserRowMapper.class,
         FriendshipRowMapper.class
@@ -75,7 +75,8 @@ class UserServiceTests {
         assertEquals(test1.getFriendId(), friendsList1.get(0).getId(), "Данные не совпадают");
         assertEquals(test2.getFriendId(), friendsList2.get(0).getId(), "Данные не совпадают");
 
-        // ← ДОБАВЛЯЕМ ПРОВЕРКУ ЛЕНТЫ СОБЫТИЙ
+        // Исправленные проверки ленты событий:
+        // У каждого пользователя должно быть по 1 событию (оба добавили друг друга)
         List<UserFeed> feed1 = userService.getFeedByUserId(addedUser1.getId());
         List<UserFeed> feed2 = userService.getFeedByUserId(addedUser2.getId());
 
@@ -155,7 +156,8 @@ class UserServiceTests {
         assertTrue(friendsList3.isEmpty(), "Список не пуст");
         assertTrue(friendsList4.isEmpty(), "Список не пуст");
 
-        // ← ДОБАВЛЯЕМ ПРОВЕРКУ ЛЕНТЫ СОБЫТИЙ
+        // Исправленные проверки ленты событий:
+        // У каждого пользователя должно быть по 2 события (добавление + удаление)
         List<UserFeed> feed1 = userService.getFeedByUserId(addedUser1.getId());
         List<UserFeed> feed2 = userService.getFeedByUserId(addedUser2.getId());
 
@@ -238,7 +240,7 @@ class UserServiceTests {
         assertEquals(3, friendsList.size(), "Количество элементов не совпадает");
         assertEquals(testList, friendsList, "Списки не совпадают");
 
-        // ← ДОБАВЛЯЕМ ПРОВЕРКУ ЛЕНТЫ СОБЫТИЙ
+        // Исправленная проверка ленты событий:
         List<UserFeed> feed = userService.getFeedByUserId(addedUser1.getId());
         assertEquals(3, feed.size(), "Должно быть 3 события в ленте после добавления 3 друзей");
     }
@@ -269,7 +271,6 @@ class UserServiceTests {
         assertEquals(addedUser3.getId(), mutualFriendsList2.get(0).getId(), "ID не совпадают");
     }
 
-    // ← ДОБАВЛЯЕМ НОВЫЙ ТЕСТ ДЛЯ ЛЕНТЫ СОБЫТИЙ
     @Test
     void testGetUserFeed() {
         User addedUser1 = userStorage.addUser(user1);
@@ -313,6 +314,43 @@ class UserServiceTests {
         // Проверяем
         assertNotNull(feed, "Лента событий не должна быть null");
         assertTrue(feed.isEmpty(), "Лента должна быть пустой для нового пользователя");
+    }
+
+    @Test
+    void testFeedEventsAreSortedByTimestampDesc() {
+        User user1 = new User(null, "user1@mail.ru", "user1", "User One",
+                LocalDate.of(1990, 1, 1));
+        User user2 = new User(null, "user2@mail.ru", "user2", "User Two",
+                LocalDate.of(1992, 2, 2));
+        User user3 = new User(null, "user3@mail.ru", "user3", "User Three",
+                LocalDate.of(1993, 3, 3));
+
+        User savedUser1 = userStorage.addUser(user1);
+        User savedUser2 = userStorage.addUser(user2);
+        User savedUser3 = userStorage.addUser(user3);
+
+        // Добавляем события
+        userService.addFriend(savedUser1.getId(), savedUser2.getId());
+        // Небольшая задержка для разницы во времени
+        try { Thread.sleep(10); } catch (InterruptedException e) { /* ignore */ }
+        userService.addFriend(savedUser1.getId(), savedUser3.getId());
+
+        // Получаем ленту
+        List<UserFeed> feed = userService.getFeedByUserId(savedUser1.getId());
+
+        // Проверяем
+        assertEquals(2, feed.size(), "Должно быть 2 события в ленте");
+
+        // Проверяем сортировку по времени (новые первыми)
+        // Второй добавленный друг должен быть первым в списке
+        assertEquals(savedUser3.getId(), feed.get(0).getEntityId(),
+                "Последнее добавление должно быть первым в ленте");
+        assertEquals(savedUser2.getId(), feed.get(1).getEntityId(),
+                "Первое добавление должно быть вторым в ленте");
+
+        // Проверяем, что timestamp убывает
+        assertTrue(feed.get(0).getTimestamp() > feed.get(1).getTimestamp(),
+                "События должны быть отсортированы по убыванию timestamp");
     }
 
     // Вспомогательный метод для генерации случайного ID, которого не должно быть в базе
