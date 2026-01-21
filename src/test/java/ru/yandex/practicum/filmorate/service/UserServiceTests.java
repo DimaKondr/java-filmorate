@@ -332,7 +332,11 @@ class UserServiceTests {
         // Добавляем события
         userService.addFriend(savedUser1.getId(), savedUser2.getId());
         // Небольшая задержка для разницы во времени
-        try { Thread.sleep(10); } catch (InterruptedException e) { /* ignore */ }
+        try {
+            Thread.sleep(10);
+        } catch (InterruptedException e) {
+            // ignore
+        }
         userService.addFriend(savedUser1.getId(), savedUser3.getId());
 
         // Получаем ленту
