@@ -7,11 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
+import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAOImpl;
+import ru.yandex.practicum.filmorate.dao.feed.UserFeedRowMapper;
 import ru.yandex.practicum.filmorate.dao.friendship.FriendshipRowMapper;
 import ru.yandex.practicum.filmorate.dao.friendship.UserFriendshipDAO;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.model.UserFeed;
 import ru.yandex.practicum.filmorate.model.UserFriendship;
 import ru.yandex.practicum.filmorate.storage.user.UserDbStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserRowMapper;
@@ -31,10 +34,12 @@ import static org.junit.jupiter.api.Assertions.*;
 @Import({
         UserDbStorage.class,
         UserFriendshipDAO.class,
+        UserFeedDAOImpl.class,      // ← ДОБАВЛЯЕМ
+        UserFeedRowMapper.class,    // ← ДОБАВЛЯЕМ
         UserService.class,
         UserRowMapper.class,
         FriendshipRowMapper.class
-        })
+})
 class UserServiceTests {
     private final UserService userService;
     User user1;
@@ -69,6 +74,16 @@ class UserServiceTests {
         assertEquals(1, friendsList2.size(), "Количество элементов не совпадает");
         assertEquals(test1.getFriendId(), friendsList1.get(0).getId(), "Данные не совпадают");
         assertEquals(test2.getFriendId(), friendsList2.get(0).getId(), "Данные не совпадают");
+
+        // ← ДОБАВЛЯЕМ ПРОВЕРКУ ЛЕНТЫ СОБЫТИЙ
+        List<UserFeed> feed1 = userService.getFeedByUserId(addedUser1.getId());
+        List<UserFeed> feed2 = userService.getFeedByUserId(addedUser2.getId());
+
+        assertEquals(1, feed1.size(), "У первого пользователя должно быть 1 событие в ленте");
+        assertEquals(1, feed2.size(), "У второго пользователя должно быть 1 событие в ленте");
+        assertEquals("FRIEND", feed1.get(0).getEventType().name(), "Тип события должен быть FRIEND");
+        assertEquals("ADD", feed1.get(0).getOperation().name(), "Операция должна быть ADD");
+        assertEquals(addedUser2.getId(), feed1.get(0).getEntityId(), "ID друга в событии не совпадает");
     }
 
     @Test
@@ -139,6 +154,17 @@ class UserServiceTests {
         // Проверяем, что в оба списка пусты
         assertTrue(friendsList3.isEmpty(), "Список не пуст");
         assertTrue(friendsList4.isEmpty(), "Список не пуст");
+
+        // ← ДОБАВЛЯЕМ ПРОВЕРКУ ЛЕНТЫ СОБЫТИЙ
+        List<UserFeed> feed1 = userService.getFeedByUserId(addedUser1.getId());
+        List<UserFeed> feed2 = userService.getFeedByUserId(addedUser2.getId());
+
+        assertEquals(2, feed1.size(), "У первого пользователя должно быть 2 события в ленте");
+        assertEquals(2, feed2.size(), "У второго пользователя должно быть 2 события в ленте");
+
+        // Проверяем, что последние события - REMOVE
+        assertEquals("REMOVE", feed1.get(0).getOperation().name(), "Последняя операция должна быть REMOVE");
+        assertEquals("REMOVE", feed2.get(0).getOperation().name(), "Последняя операция должна быть REMOVE");
     }
 
     @Test
@@ -181,9 +207,9 @@ class UserServiceTests {
 
         // Проверяем, что было выброшено необходимое исключение, так как ID друга не найден
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userService.removeFriend(addedUser1.getId(), 4L),
+                () -> userService.removeFriend(addedUser1.getId(), 999L),
                 "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Попытка получения пользователя. Пользователь с ID: " + 4L + " не найден",
+        assertEquals("Попытка получения пользователя. Пользователь с ID: " + 999L + " не найден",
                 exception.getMessage(), "Сообщения не совпадают");
     }
 
@@ -211,6 +237,10 @@ class UserServiceTests {
         // Проверяем, что в списке верное количество друзей и данные совпадают
         assertEquals(3, friendsList.size(), "Количество элементов не совпадает");
         assertEquals(testList, friendsList, "Списки не совпадают");
+
+        // ← ДОБАВЛЯЕМ ПРОВЕРКУ ЛЕНТЫ СОБЫТИЙ
+        List<UserFeed> feed = userService.getFeedByUserId(addedUser1.getId());
+        assertEquals(3, feed.size(), "Должно быть 3 события в ленте после добавления 3 друзей");
     }
 
     @Test
@@ -239,17 +269,63 @@ class UserServiceTests {
         assertEquals(addedUser3.getId(), mutualFriendsList2.get(0).getId(), "ID не совпадают");
     }
 
+    // ← ДОБАВЛЯЕМ НОВЫЙ ТЕСТ ДЛЯ ЛЕНТЫ СОБЫТИЙ
+    @Test
+    void testGetUserFeed() {
+        User addedUser1 = userStorage.addUser(user1);
+        User addedUser2 = userStorage.addUser(user2);
+
+        // Добавляем друга
+        userService.addFriend(addedUser1.getId(), addedUser2.getId());
+
+        // Получаем ленту событий
+        List<UserFeed> feed = userService.getFeedByUserId(addedUser1.getId());
+
+        // Проверяем
+        assertNotNull(feed, "Лента событий не должна быть null");
+        assertEquals(1, feed.size(), "Должно быть 1 событие в ленте");
+
+        UserFeed event = feed.get(0);
+        assertEquals(addedUser1.getId(), event.getUserId(), "ID пользователя в событии не совпадает");
+        assertEquals("FRIEND", event.getEventType().name(), "Тип события должен быть FRIEND");
+        assertEquals("ADD", event.getOperation().name(), "Операция должна быть ADD");
+        assertEquals(addedUser2.getId(), event.getEntityId(), "ID друга в событии не совпадает");
+        assertNotNull(event.getTimestamp(), "Timestamp не должен быть null");
+    }
+
+    @Test
+    void testGetUserFeedForNonExistentUser() {
+        // Проверяем, что было выброшено исключение для несуществующего пользователя
+        NotFoundException exception = assertThrows(NotFoundException.class,
+                () -> userService.getFeedByUserId(999L),
+                "Должно быть выброшено исключение для несуществующего пользователя");
+        assertEquals("Попытка получения пользователя. Пользователь с ID: 999 не найден",
+                exception.getMessage(), "Сообщения не совпадают");
+    }
+
+    @Test
+    void testGetEmptyUserFeed() {
+        User addedUser1 = userStorage.addUser(user1);
+
+        // Получаем ленту событий для пользователя без событий
+        List<UserFeed> feed = userService.getFeedByUserId(addedUser1.getId());
+
+        // Проверяем
+        assertNotNull(feed, "Лента событий не должна быть null");
+        assertTrue(feed.isEmpty(), "Лента должна быть пустой для нового пользователя");
+    }
+
     // Вспомогательный метод для генерации случайного ID, которого не должно быть в базе
     Long generateUniqueId(Long id1, Long id2) {
         Random random = new Random();
         long uniqueId;
         while (true) {
-            long result = random.nextLong();
+            // Используем более безопасный способ генерации ID
+            long result = Math.abs(random.nextLong() % 10000) + 10000;
             if (result != id1 && result != id2) {
                 uniqueId = result;
                 return uniqueId;
             }
         }
     }
-
 }

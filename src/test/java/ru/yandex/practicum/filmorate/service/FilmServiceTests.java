@@ -7,6 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
+import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAO;
+import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAOImpl;
+import ru.yandex.practicum.filmorate.dao.feed.UserFeedRowMapper;
 import ru.yandex.practicum.filmorate.dao.friendship.FriendshipRowMapper;
 import ru.yandex.practicum.filmorate.dao.friendship.UserFriendshipDAO;
 import ru.yandex.practicum.filmorate.dao.genre.FilmGenreDAO;
@@ -43,6 +46,8 @@ import static org.junit.jupiter.api.Assertions.*;
         FilmGenreDAO.class,
         FilmAgeRatingDAO.class,
         UserFriendshipDAO.class,
+        UserFeedDAOImpl.class,  // ← ДОБАВЛЯЕМ
+        UserFeedRowMapper.class, // ← ДОБАВЛЯЕМ
         UserService.class,
         FilmService.class,
         FilmRowMapper.class,
@@ -50,10 +55,11 @@ import static org.junit.jupiter.api.Assertions.*;
         GenreRowMapper.class,
         RatingRowMapper.class,
         FriendshipRowMapper.class
-        })
+})
 class FilmServiceTests {
     private final FilmService filmService;
     private final UserService userService;
+    private final UserFeedDAO userFeedDAO; // ← ДОБАВЛЯЕМ (опционально)
 
     Film film;
     User user;
@@ -76,12 +82,17 @@ class FilmServiceTests {
         User addedUser = userStorage.addUser(user);
         Film addedFilm = filmStorage.addFilm(film);
 
-        Film likedFilm = filmService.addLike(addedFilm.getId(),addedUser.getId());
+        Film likedFilm = filmService.addLike(addedFilm.getId(), addedUser.getId());
         List<Long> test1 = new ArrayList<>(filmService.getLikeDAO().getLikesOfFilm(addedFilm));
 
         // Проверяем, что в списке только один ID с нужным номером
         assertEquals(1, test1.size(), "Количество элементов не совпадает");
         assertEquals(addedUser.getId(), test1.get(0), "ID не совпадает");
+
+        // ← ДОБАВЛЯЕМ проверку записи события
+        var feed = userService.getFeedByUserId(addedUser.getId());
+        assertEquals(1, feed.size(), "Должно быть 1 событие в ленте");
+        assertEquals(addedFilm.getId(), feed.get(0).getEntityId(), "ID фильма в событии не совпадает");
     }
 
     @Test
@@ -94,7 +105,7 @@ class FilmServiceTests {
 
         // Проверяем, что было выброшено необходимое исключение, так как ID фильма не найден
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> filmService.addLike(uniqueId,addedUser.getId()),
+                () -> filmService.addLike(uniqueId, addedUser.getId()),
                 "Исключение не выброшено, или выброшено неверное исключение");
         assertEquals("Попытка получения фильма. Фильм с ID: " + uniqueId + " не найден",
                 exception.getMessage(), "Сообщения не совпадают");
@@ -110,7 +121,7 @@ class FilmServiceTests {
 
         // Проверяем, что было выброшено необходимое исключение, так как ID пользователя не найден
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> filmService.addLike(addedFilm.getId(),uniqueId),
+                () -> filmService.addLike(addedFilm.getId(), uniqueId),
                 "Исключение не выброшено, или выброшено неверное исключение");
         assertEquals("Попытка получения пользователя. Пользователь с ID: " + uniqueId + " не найден",
                 exception.getMessage(), "Сообщения не совпадают");
@@ -128,11 +139,20 @@ class FilmServiceTests {
         assertEquals(1, test1.size(), "Количество элементов не совпадает");
         assertEquals(addedUser.getId(), test1.get(0), "ID не совпадает");
 
+        // ← ДОБАВЛЯЕМ проверку события добавления лайка
+        var feedAfterLike = userService.getFeedByUserId(addedUser.getId());
+        assertEquals(1, feedAfterLike.size(), "Должно быть 1 событие после добавления лайка");
+
         filmService.removeLike(addedFilm.getId(), addedUser.getId());
         List<Long> test2 = new ArrayList<>(filmService.getLikeDAO().getLikesOfFilm(addedFilm));
 
         // Проверяем, что в список лайков пуст
         assertTrue(test2.isEmpty(), "Список не пуст");
+
+        // ← ДОБАВЛЯЕМ проверку события удаления лайка
+        var feedAfterRemove = userService.getFeedByUserId(addedUser.getId());
+        assertEquals(2, feedAfterRemove.size(), "Должно быть 2 события в ленте");
+        assertEquals(addedFilm.getId(), feedAfterRemove.get(0).getEntityId(), "ID фильма в событии не совпадает");
     }
 
     @Test
@@ -147,7 +167,7 @@ class FilmServiceTests {
 
         // Проверяем, что было выброшено необходимое исключение, так как ID фильма не найден
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> filmService.removeLike(uniqueId,addedUser.getId()),
+                () -> filmService.removeLike(uniqueId, addedUser.getId()),
                 "Исключение не выброшено, или выброшено неверное исключение");
         assertEquals("Попытка получения фильма. Фильм с ID: " + uniqueId + " не найден",
                 exception.getMessage(), "Сообщения не совпадают");
@@ -164,7 +184,7 @@ class FilmServiceTests {
 
         // Проверяем, что было выброшено необходимое исключение, так как ID пользователя не найден
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> filmService.removeLike(likedFilm.getId(),uniqueId),
+                () -> filmService.removeLike(likedFilm.getId(), uniqueId),
                 "Исключение не выброшено, или выброшено неверное исключение");
         assertEquals("Пользователь с ID: " + uniqueId + " не найден. Невозможно удалить лайк у фильма",
                 exception.getMessage(), "Сообщения не совпадают");
@@ -220,17 +240,43 @@ class FilmServiceTests {
         assertEquals(addedFilmsId.get(1), result1.get(2).getId(), "ID не совпадают");
     }
 
+    // ← ДОБАВЛЯЕМ НОВЫЙ ТЕСТ ДЛЯ ПРОВЕРКИ ЛЕНТЫ СОБЫТИЙ
+    @Test
+    void testUserFeedEvents() {
+        User user1 = userStorage.addUser(new User(null, "user1@mail.ru", "user1", "User One",
+                LocalDate.of(1990, 1, 1)));
+        User user2 = userStorage.addUser(new User(null, "user2@mail.ru", "user2", "User Two",
+                LocalDate.of(1992, 2, 2)));
+        Film film1 = filmStorage.addFilm(film);
+
+        // Добавляем друга
+        userService.addFriend(user1.getId(), user2.getId());
+
+        // Добавляем лайк
+        filmService.addLike(film1.getId(), user1.getId());
+
+        // Получаем ленту событий
+        var feed1 = userService.getFeedByUserId(user1.getId());
+        var feed2 = userService.getFeedByUserId(user2.getId());
+
+        // Проверяем ленту user1
+        assertEquals(2, feed1.size(), "У user1 должно быть 2 события");
+        assertEquals(film1.getId(), feed1.get(0).getEntityId(), "Первое событие должно быть LIKE");
+
+        // Проверяем ленту user2
+        assertEquals(0, feed2.size(), "У user2 не должно быть событий (дружба записывается у инициатора)");
+    }
+
     // Вспомогательный метод для генерации случайного ID, которого не должно быть в базе
     Long generateUniqueId(Long id1, Long id2) {
         Random random = new Random();
         long uniqueId;
         while (true) {
-            long result = random.nextLong();
+            long result = Math.abs(random.nextLong() % 1000) + 1000; // Более надежный способ
             if (result != id1 && result != id2) {
                 uniqueId = result;
                 return uniqueId;
             }
         }
     }
-
 }
