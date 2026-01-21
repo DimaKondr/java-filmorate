@@ -49,7 +49,6 @@ public class UserFeedDAOImpl implements UserFeedDAO {
             }
         } catch (DataAccessException e) {
             log.error("Ошибка при добавлении события в ленту: {}", e.getMessage());
-            // Не бросаем исключение, чтобы не ломать основной функционал
         }
     }
 
@@ -64,7 +63,6 @@ public class UserFeedDAOImpl implements UserFeedDAO {
             return feed;
         } catch (DataAccessException e) {
             log.error("Ошибка при получении ленты событий пользователя с ID: {}: {}", userId, e.getMessage());
-            // Возвращаем пустой список вместо исключения
             return Collections.emptyList();
         }
     }
@@ -72,9 +70,6 @@ public class UserFeedDAOImpl implements UserFeedDAO {
     @Override
     public void addLikeEvent(Long userId, Long entityId, Operation operation) {
         try {
-            log.info("Добавление события LIKE: userId={}, entityId={}, operation={}",
-                    userId, entityId, operation);
-
             UserFeed event = new UserFeed();
             event.setTimestamp(Instant.now().toEpochMilli());
             event.setUserId(userId);
@@ -91,9 +86,6 @@ public class UserFeedDAOImpl implements UserFeedDAO {
     @Override
     public void addFriendEvent(Long userId, Long entityId, Operation operation) {
         try {
-            log.info("Добавление события FRIEND: userId={}, entityId={}, operation={}",
-                    userId, entityId, operation);
-
             UserFeed event = new UserFeed();
             event.setTimestamp(Instant.now().toEpochMilli());
             event.setUserId(userId);
@@ -102,7 +94,6 @@ public class UserFeedDAOImpl implements UserFeedDAO {
             event.setEntityId(entityId);
 
             addEvent(event);
-
         } catch (Exception e) {
             log.error("Ошибка при добавлении события FRIEND: {}", e.getMessage());
         }
@@ -111,9 +102,6 @@ public class UserFeedDAOImpl implements UserFeedDAO {
     @Override
     public void addReviewEvent(Long userId, Long entityId, Operation operation) {
         try {
-            log.info("Добавление события REVIEW: userId={}, entityId={}, operation={}",
-                    userId, entityId, operation);
-
             UserFeed event = new UserFeed();
             event.setTimestamp(Instant.now().toEpochMilli());
             event.setUserId(userId);
