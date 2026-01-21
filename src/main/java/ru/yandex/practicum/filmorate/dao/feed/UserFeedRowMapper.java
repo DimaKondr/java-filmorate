@@ -17,16 +17,31 @@ public class UserFeedRowMapper implements RowMapper<UserFeed> {
     @Override
     public UserFeed mapRow(ResultSet resultSet, int rowNum) throws SQLException {
         try {
-            return new UserFeed(
-                    resultSet.getLong("event_id"),
-                    resultSet.getLong("timestamp"),
-                    resultSet.getLong("user_id"),
-                    EventType.valueOf(resultSet.getString("event_type")),
-                    Operation.valueOf(resultSet.getString("operation")),
-                    resultSet.getLong("entity_id")
-            );
+            Long eventId = resultSet.getLong("event_id");
+            if (resultSet.wasNull()) {
+                eventId = null;
+            }
+
+            Long timestamp = resultSet.getLong("timestamp");
+            Long userId = resultSet.getLong("user_id");
+            String eventTypeStr = resultSet.getString("event_type");
+            String operationStr = resultSet.getString("operation");
+            Long entityId = resultSet.getLong("entity_id");
+
+            if (eventTypeStr == null || operationStr == null) {
+                log.error("Ошибка при маппинге UserFeed: eventType или operation null");
+                return null;
+            }
+
+            EventType eventType = EventType.valueOf(eventTypeStr);
+            Operation operation = Operation.valueOf(operationStr);
+
+            return new UserFeed(eventId, timestamp, userId, eventType, operation, entityId);
         } catch (IllegalArgumentException e) {
             log.error("Ошибка при маппинге UserFeed: {}", e.getMessage());
+            return null;
+        } catch (SQLException e) {
+            log.error("SQL ошибка при маппинге UserFeed: {}", e.getMessage());
             return null;
         }
     }
