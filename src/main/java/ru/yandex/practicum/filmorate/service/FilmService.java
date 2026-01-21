@@ -10,7 +10,6 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.SortType;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.film.FilmDbStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.util.*;
@@ -22,15 +21,12 @@ public class FilmService {
     private final FilmStorage filmStorage;
     private final UserService userService;
     private final LikeDAO likeDAO;
-    private final FilmDbStorage filmDbStorage;
 
     @Autowired
-    public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage, UserService userService, LikeDAO likeDAO,
-                       FilmDbStorage filmDbStorage) {
+    public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage, UserService userService, LikeDAO likeDAO) {
         this.filmStorage = filmStorage;
         this.userService = userService;
         this.likeDAO = likeDAO;
-        this.filmDbStorage = filmDbStorage;
     }
 
     public Film addLike(Long likedFilmId, Long userId) {
@@ -66,8 +62,8 @@ public class FilmService {
 
     public List<Film> getFilmsByDirector(Long directorId, SortType sortType) {
        return switch (sortType) {
-           case LIKES -> filmDbStorage.getFilmsByDirectorSortedByLikes(directorId);
-           case YEAR -> filmDbStorage.getFilmsByDirectorSortedByYear(directorId);
+           case LIKES -> filmStorage.getFilmsByDirectorSortedByLikes(directorId);
+           case YEAR -> filmStorage.getFilmsByDirectorSortedByYear(directorId);
        };
     }
 }
