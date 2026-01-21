@@ -107,4 +107,23 @@ public class UserFeedDAOImpl implements UserFeedDAO {
             log.error("Ошибка при добавлении события FRIEND: {}", e.getMessage());
         }
     }
+
+    @Override
+    public void addReviewEvent(Long userId, Long entityId, Operation operation) {
+        try {
+            log.info("Добавление события REVIEW: userId={}, entityId={}, operation={}",
+                    userId, entityId, operation);
+
+            UserFeed event = new UserFeed();
+            event.setTimestamp(Instant.now().toEpochMilli());
+            event.setUserId(userId);
+            event.setEventType(EventType.REVIEW);
+            event.setOperation(operation);
+            event.setEntityId(entityId);
+
+            addEvent(event);
+        } catch (Exception e) {
+            log.error("Ошибка при добавлении события REVIEW: {}", e.getMessage());
+        }
+    }
 }

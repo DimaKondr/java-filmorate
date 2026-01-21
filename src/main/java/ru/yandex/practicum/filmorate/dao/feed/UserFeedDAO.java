@@ -15,4 +15,6 @@ public interface UserFeedDAO {
 
     void addFriendEvent(Long userId, Long entityId, Operation operation);
 
+    void addReviewEvent(Long userId, Long entityId, Operation operation);
+
 }
