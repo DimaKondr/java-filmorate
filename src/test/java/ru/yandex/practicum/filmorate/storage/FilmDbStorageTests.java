@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
+import ru.yandex.practicum.filmorate.dao.director.DirectorRowMapper;
 import ru.yandex.practicum.filmorate.dao.like.FilmLikeDAO;
 import ru.yandex.practicum.filmorate.dao.rating.FilmAgeRatingDAO;
 import ru.yandex.practicum.filmorate.dao.genre.FilmGenreDAO;
@@ -37,7 +38,8 @@ import static org.junit.jupiter.api.Assertions.*;
         FilmLikeDAO.class,
         FilmAgeRatingDAO.class,
         GenreRowMapper.class,
-        RatingRowMapper.class
+        RatingRowMapper.class,
+        DirectorRowMapper.class
         })
 class FilmDbStorageTests {
     private final FilmDbStorage filmDbStorage;

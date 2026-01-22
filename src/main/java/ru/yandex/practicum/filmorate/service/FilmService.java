@@ -9,6 +9,7 @@ import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAO;
 import ru.yandex.practicum.filmorate.dao.like.LikeDAO;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.SortType;
 import ru.yandex.practicum.filmorate.model.Operation;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
@@ -70,5 +71,12 @@ public class FilmService {
             mostPopularFilms.add(filmStorage.getFilmById(id));
         }
         return mostPopularFilms;
+    }
+
+    public List<Film> getFilmsByDirector(Long directorId, SortType sortType) {
+       return switch (sortType) {
+           case LIKES -> filmStorage.getFilmsByDirectorSortedByLikes(directorId);
+           case YEAR -> filmStorage.getFilmsByDirectorSortedByYear(directorId);
+       };
     }
 }
