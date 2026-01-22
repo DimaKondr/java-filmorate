@@ -8,6 +8,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.dao.director.DirectorRowMapper;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.dao.genre.GenreDAO;
 import ru.yandex.practicum.filmorate.dao.like.LikeDAO;
 import ru.yandex.practicum.filmorate.dao.rating.RatingDAO;
@@ -93,42 +94,21 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     @Override
+    @Transactional
     public Film removeFilm(Long filmId) {
-        String query = "DELETE FROM films WHERE id = ?";
+        log.info("Удаление фильма с ID: {}", filmId);
+
+        Film film = getFilmById(filmId); // Сам выбросит NotFoundException
 
         try {
-            log.info("Начат процесс удаления фильма с ID: {}", filmId);
-            Film removedFilm = null;
-            try {
-                removedFilm = getFilmById(filmId);
-            } catch (NotFoundException e) {
-                log.error("В процессе удаления фильма не удалось его получить по ID: {}. --> {}",
-                        filmId, e.getMessage());
-                throw new NotFoundException("Не удалось удалить фильм.");
-            }
-
-            int affectedRows = jdbc.update(query, filmId);
-            if (affectedRows != 1) {
-                log.error("При удалении фильма должна быть обработана 1 строка, а обработано {} строк.",
-                        affectedRows);
-                throw new DataBaseException("Не удалось удалить фильм.");
-            }
-            log.info("Фильм с ID: {} успешно удален.", filmId);
-
-            if (!removedFilm.getGenres().isEmpty()) {
-                genreDAO.removeFilmsGenres(removedFilm);
-            }
-            if (removedFilm.getMpa().getId() != null) {
-                ratingDAO.removeFilmRating(removedFilm);
-            }
-            if (!removedFilm.getFilmLikedUsersId().isEmpty()) {
-                likeDAO.removeAllLikesFromFilm(removedFilm);
-            }
-            return removedFilm;
+            jdbc.update("DELETE FROM films WHERE id = ?", filmId);
         } catch (DataAccessException e) {
-            log.error("Неудачная попытка удаления фильма с ID: {}. --> {}", filmId, e.getMessage());
+            log.error("Ошибка БД при удалении фильма с ID: {}", filmId, e);
             throw new DataBaseException("Не удалось удалить фильм.");
         }
+
+        log.info("Фильм с ID: {} успешно удален", filmId);
+        return film;
     }
 
     @Override
