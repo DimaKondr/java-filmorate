@@ -8,7 +8,6 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
 import ru.yandex.practicum.filmorate.dao.director.DirectorRowMapper;
-import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAO;
 import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAOImpl;
 import ru.yandex.practicum.filmorate.dao.feed.UserFeedRowMapper;
 import ru.yandex.practicum.filmorate.dao.friendship.FriendshipRowMapper;
