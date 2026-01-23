@@ -45,7 +45,7 @@ public class FilmDbStorage implements FilmStorage {
         }
 
         log.info("Начат процесс добавления нового фильма.");
-        String query = "INSERT INTO films(name, description, release_Date, duration) " +
+        String query = "INSERT INTO films(name, description, release_date, duration) " +
                 "VALUES (?, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
         int affectedRows = -1;
@@ -74,7 +74,6 @@ public class FilmDbStorage implements FilmStorage {
         if (id != null) {
             film.setId(id);
             log.debug("Новому фильму назначен ID: {}", film.getId());
-            log.info("Успешно добавлен новый фильм с ID: {}", film.getId());
 
             if (!film.getGenres().isEmpty()) {
                 genreDAO.addGenreToFilm(film);
@@ -83,6 +82,8 @@ public class FilmDbStorage implements FilmStorage {
                 ratingDAO.addRatingToFilm(film);
             }
             addDirectors(film);
+
+            log.info("Успешно добавлен новый фильм с ID: {}", film.getId());
             return film;
         } else {
             log.error("Не удалось добавить новый фильм, так как ID имеет null-значение.");
@@ -95,7 +96,7 @@ public class FilmDbStorage implements FilmStorage {
     public Film removeFilm(Long filmId) {
         log.info("Удаление фильма с ID: {}", filmId);
 
-        Film film = getFilmById(filmId); // Сам выбросит NotFoundException
+        Film film = getFilmById(filmId);
 
         try {
             jdbc.update("DELETE FROM films WHERE id = ?", filmId);
@@ -115,54 +116,42 @@ public class FilmDbStorage implements FilmStorage {
             throw new ValidationException("Запрос на обновление данных фильма поступил с пустым телом");
         }
 
-        log.info("Начат процесс обновления данных фильма. Проверяем ID пользователя");
+        log.info("Начат процесс обновления данных фильма.");
         if (updatedFilm.getId() == null) {
             log.error("Фильм имеет ID со значением null");
             throw new ValidationException("ID фильма должен быть указан");
         }
 
         log.info("Начата проверка наличия фильма с ID: {}", updatedFilm.getId());
-        Film oldFilm = null;
-        try {
-            oldFilm = getFilmById(updatedFilm.getId());
-            if (oldFilm == null) {
-                log.error("Обновление фильма. ID: {} Не найден", updatedFilm.getId());
-                throw new NotFoundException("Обновление фильма. Фильм с ID: "
-                        + updatedFilm.getId() + " не найден");
-            }
-        } catch (NotFoundException e) {
-            log.error("Обновление фильма. Ошибка при проверке существования ID --> {}", e.getMessage());
-            throw new NotFoundException("Обновление фильма. Ошибка при проверке существования ID");
+        Film oldFilm = getFilmById(updatedFilm.getId());
+        if (oldFilm == null) {
+            log.error("Обновление фильма. ID: {} Не найден", updatedFilm.getId());
+            throw new NotFoundException("Обновление фильма. Фильм с ID: " + updatedFilm.getId() + " не найден");
         }
 
         LocalDate cinemaBirthDate = LocalDate.of(1895, Month.DECEMBER, 28);
         if (!oldFilm.getName().equals(updatedFilm.getName())) {
-            log.debug("Устанавливаем обновленное название фильма: {}", updatedFilm.getName());
             oldFilm.setName(updatedFilm.getName());
         }
         if (!oldFilm.getDescription().equals(updatedFilm.getDescription())) {
-            log.debug("Обновляем описание фильма: {}", updatedFilm.getDescription());
             oldFilm.setDescription(updatedFilm.getDescription());
         }
         if (!oldFilm.getReleaseDate().isEqual(updatedFilm.getReleaseDate())
                 && updatedFilm.getReleaseDate().isAfter(cinemaBirthDate)) {
-            log.debug("Устанавливаем обновленную дату релиза: {}", updatedFilm.getReleaseDate());
             oldFilm.setReleaseDate(updatedFilm.getReleaseDate());
         }
         if (!oldFilm.getDuration().equals(updatedFilm.getDuration())) {
-            log.debug("Устанавливаем обновленную длительность фильма: {}", updatedFilm.getDuration());
             oldFilm.setDuration(updatedFilm.getDuration());
         }
 
-        log.debug("Обновляем данные фильма с ID: {} ...", oldFilm.getId());
-        String query = "UPDATE films SET name = ?, description = ?, release_Date = ?, duration = ? WHERE id = ?";
+        String query = "UPDATE films SET name = ?, description = ?, release_date = ?, duration = ? WHERE id = ?";
         int affectedRows = -1;
 
         try {
             affectedRows = jdbc.update(query,
                     oldFilm.getName(),
                     oldFilm.getDescription(),
-                    oldFilm.getReleaseDate().toString(),
+                    oldFilm.getReleaseDate(),
                     oldFilm.getDuration(),
                     oldFilm.getId());
         } catch (DataAccessException e) {
@@ -175,15 +164,12 @@ public class FilmDbStorage implements FilmStorage {
                     affectedRows);
             throw new DataBaseException("Не удалось обновить данные фильма.");
         }
-        log.info("Данные фильма с ID: {} успешно обновлены.", oldFilm.getId());
 
         if (!oldFilm.getGenres().equals(updatedFilm.getGenres())) {
-            log.debug("Обновляем данные о жанрах фильма с ID: {}.", oldFilm.getId());
             genreDAO.removeFilmsGenres(oldFilm);
             genreDAO.addGenreToFilm(updatedFilm);
         }
         if (updatedFilm.getMpa().getId() != null && !updatedFilm.getMpa().getId().equals(oldFilm.getMpa().getId())) {
-            log.debug("Обновляем данные о возрастном рейтинге фильма с ID: {}.", oldFilm.getId());
             ratingDAO.removeFilmRating(oldFilm);
             ratingDAO.addRatingToFilm(updatedFilm);
         }
@@ -195,6 +181,7 @@ public class FilmDbStorage implements FilmStorage {
             oldFilm.getDirectors().addAll(loadDirector(oldFilm.getId()));
         }
 
+        log.info("Данные фильма с ID: {} успешно обновлены.", oldFilm.getId());
         return oldFilm;
     }
 
@@ -205,47 +192,16 @@ public class FilmDbStorage implements FilmStorage {
         try {
             log.info("Начат процесс предоставления списка всех фильмов.");
             List<Film> films = jdbc.query(query, mapper);
+
             if (!films.isEmpty()) {
-                log.debug("Добавляем ID жанров в каждый фильм списка.");
                 for (Film film : films) {
-                    List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
-                    if (!filmGenres.isEmpty()) {
-                        log.info("Список жанров фильма c ID: {} успешно предоставлен.", film.getId());
-                        for (FilmGenre genre : filmGenres) {
-                            film.getGenres().add(genre);
-                        }
-                    } else {
-                        log.debug("Список жанров фильма с ID: {} пуст.", film.getId());
-                    }
-
-                    log.debug("Добавляем ID возрастного рейтинга в каждый фильм списка.");
-                    FilmAgeRating filmAgeRating = ratingDAO.getRatingOfFilm(film);
-                    if (filmAgeRating != null) {
-                        film.getMpa().setId(filmAgeRating.getId());
-                        film.getMpa().setName(filmAgeRating.getName());
-                    }
-
-                    log.debug("Добавляем имеющиеся лайки в каждый фильм списка.");
-                    Set<Long> filmLikes = likeDAO.getLikesOfFilm(film);
-                    if (!filmLikes.isEmpty()) {
-                        log.info("Набор лайков фильма c ID: {} успешно предоставлен.", film.getId());
-                        for (Long like : filmLikes) {
-                            film.getFilmLikedUsersId().add(like);
-                        }
-                    } else {
-                        log.debug("Список лайков фильма с ID: {} пуст.", film.getId());
-                    }
-
-                    Set<Director> director = loadDirector(film.getId());
-                    if (!director.isEmpty()) {
-                        film.getDirectors().addAll(director);
-                    }
+                    fillFilmAdditionalData(film);
                 }
                 log.info("Список всех фильмов успешно предоставлен.");
                 return films;
             } else {
-                log.error("Список всех фильмов пуст.");
-                throw new DataBaseException("Список всех фильмов пуст.");
+                log.info("Список всех фильмов пуст.");
+                return films;
             }
         } catch (DataAccessException e) {
             log.error("Неудачная попытка получения списка всех фильмов. --> {}", e.getMessage());
@@ -258,68 +214,33 @@ public class FilmDbStorage implements FilmStorage {
         String query = "SELECT * FROM films WHERE id = ?";
 
         try {
-            log.info("Начата проверка наличия фильма с ID: {} для его предоставления по запросу", filmId);
+            log.info("Начата проверка наличия фильма с ID: {}", filmId);
             Film film = jdbc.queryForObject(query, mapper, filmId);
-            if (film != null) {
-                log.debug("Добавляем ID жанров в фильм.");
-                List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
-                if (!filmGenres.isEmpty()) {
-                    log.info("Получение фильма. Получен список жанров фильма c ID: {}", filmId);
-                    for (FilmGenre genre : filmGenres) {
-                        film.getGenres().add(genre);
-                    }
-                } else {
-                    log.debug("Получение фильма. Список жанров фильма с ID: {} пуст.", film.getId());
-                }
 
-                log.debug("Добавляем ID возрастного рейтинга в фильм.");
-                FilmAgeRating filmAgeRating = ratingDAO.getRatingOfFilm(film);
-                if (filmAgeRating != null) {
-                    film.getMpa().setId(filmAgeRating.getId());
-                    film.getMpa().setName(filmAgeRating.getName());
-                }
+            fillFilmAdditionalData(film);
 
-                log.debug("Добавляем ID пользователей, которые поставили лайк фильму.");
-                Set<Long> filmLikes = likeDAO.getLikesOfFilm(film);
-                if (!filmLikes.isEmpty()) {
-                    log.info("Получение фильма. Получен список лайков фильма c ID: {}", filmId);
-                    for (Long like : filmLikes) {
-                        film.getFilmLikedUsersId().add(like);
-                    }
-                } else {
-                    log.debug("Получение фильма. Список лайков фильма с ID: {} пуст.", film.getId());
-                }
-
-                Set<Director> director = loadDirector(filmId);
-                if (!director.isEmpty()) {
-                    film.getDirectors().addAll(director);
-                }
-
-                log.info("Фильм с ID: {} найден и успешно предоставлен в ответ на запрос.", filmId);
-                return film;
-            } else {
-                throw new DataBaseException("Не удалось получить фильм c ID: " + filmId);
-            }
+            log.info("Фильм с ID: {} найден и успешно предоставлен.", filmId);
+            return film;
         } catch (DataAccessException e) {
             log.error("Неудачная попытка получения фильма по ID: {}. --> {}", filmId, e.getMessage());
-            throw new NotFoundException("Попытка получения фильма. Фильм с ID: " + filmId + " не найден");
+            throw new NotFoundException("Фильм с ID: " + filmId + " не найден");
         }
     }
 
     @Override
     public List<Film> getFilmsByDirectorSortedByLikes(Long directorId) {
-        String query = "SELECT f.id, f.name, f.description, f.release_date, f.duration " +
-                "FROM films AS f " +
-                "JOIN film_directors AS f_d ON f_d.film_id = f.id " +
-                "LEFT JOIN film_likes AS f_l ON f_l.film_id = f.id " +
-                "WHERE f_d.director_id = ? " +
+        String query = "SELECT f.* " +
+                "FROM films f " +
+                "JOIN film_directors fd ON f.id = fd.film_id " +
+                "LEFT JOIN film_likes fl ON f.id = fl.film_id " +
+                "WHERE fd.director_id = ? " +
                 "GROUP BY f.id " +
-                "ORDER BY COUNT(f_l.user_id) DESC";
+                "ORDER BY COUNT(fl.user_id) DESC";
 
         List<Film> films = jdbc.query(query, mapper, directorId);
 
         for (Film film : films) {
-            film.getDirectors().addAll(loadDirector(film.getId()));
+            fillFilmAdditionalData(film);
         }
 
         return films;
@@ -327,18 +248,133 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> getFilmsByDirectorSortedByYear(Long directorId) {
-        String query = "SELECT f.id, f.name, f.description, f.release_date, f.duration " +
-                "FROM films AS f " +
-                "JOIN film_directors AS f_d ON f_d.film_id = f.id " +
-                "WHERE f_d.director_id = ? " +
-                "ORDER BY f.release_date ASC";
+        String query = "SELECT f.* FROM films f " +
+                "JOIN film_directors fd ON f.id = fd.film_id " +
+                "WHERE fd.director_id = ? " +
+                "ORDER BY f.release_date";
+
         List<Film> films = jdbc.query(query, mapper, directorId);
 
         for (Film film : films) {
-            film.getDirectors().addAll(loadDirector(film.getId()));
+            fillFilmAdditionalData(film);
         }
 
         return films;
+    }
+
+    @Override
+    public List<Film> searchFilms(String query, List<String> criteria) {
+        log.info("Поиск фильмов по запросу: '{}' с критериями: {}", query, criteria);
+
+        if (query == null || query.trim().isEmpty()) {
+            log.warn("Запрос поиска пустой");
+            return new ArrayList<>();
+        }
+
+        String searchQuery = query.toLowerCase().trim();
+
+        try {
+            StringBuilder sql = new StringBuilder(
+                    "SELECT DISTINCT f.* FROM films f " +
+                            "LEFT JOIN film_directors fd ON f.id = fd.film_id " +
+                            "LEFT JOIN directors d ON fd.director_id = d.id "
+            );
+
+            List<String> conditions = new ArrayList<>();
+            List<Object> params = new ArrayList<>();
+
+            if (criteria.contains("title")) {
+                conditions.add("LOWER(f.name) LIKE ?");
+                params.add("%" + searchQuery + "%");
+            }
+
+            if (criteria.contains("director")) {
+                conditions.add("LOWER(d.name) LIKE ?");
+                params.add("%" + searchQuery + "%");
+            }
+
+            if (conditions.isEmpty()) {
+                log.warn("Нет критериев поиска, возвращаем пустой список");
+                return new ArrayList<>();
+            }
+
+            if (!conditions.isEmpty()) {
+                sql.append("WHERE ");
+                if (conditions.size() == 2) {
+                    sql.append("(").append(conditions.get(0)).append(" OR ").append(conditions.get(1)).append(")");
+                } else {
+                    sql.append(conditions.get(0));
+                }
+            }
+
+            sql.append(" ORDER BY f.id");
+
+            List<Film> films = jdbc.query(sql.toString(), mapper, params.toArray());
+            log.info("Найдено {} фильмов по запросу '{}'", films.size(), query);
+
+            for (Film film : films) {
+                fillFilmAdditionalData(film);
+            }
+
+            return films;
+
+        } catch (DataAccessException e) {
+            log.error("Ошибка БД при поиске фильмов по запросу '{}': {}", query, e.getMessage(), e);
+            throw new DataBaseException("Не удалось выполнить поиск фильмов.");
+        }
+    }
+
+    @Override
+    public List<Film> getMostPopularFilms(int count) {
+        log.info("Получение {} самых популярных фильмов", count);
+
+        String sql = "SELECT f.* FROM films f " +
+                "LEFT JOIN film_likes fl ON f.id = fl.film_id " +
+                "GROUP BY f.id " +
+                "ORDER BY COUNT(fl.user_id) DESC " +
+                "LIMIT ?";
+
+        try {
+            List<Film> films = jdbc.query(sql, mapper, count);
+
+            for (Film film : films) {
+                fillFilmAdditionalData(film);
+            }
+
+            log.info("Успешно получено {} популярных фильмов", films.size());
+            return films;
+
+        } catch (DataAccessException e) {
+            log.error("Ошибка при получении популярных фильмов: {}", e.getMessage(), e);
+            throw new DataBaseException("Не удалось получить популярные фильмы");
+        }
+    }
+
+    private void fillFilmAdditionalData(Film film) {
+        // Жанры
+        List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
+        if (!filmGenres.isEmpty()) {
+            film.getGenres().addAll(filmGenres);
+        }
+
+        // Рейтинг MPA
+        FilmAgeRating filmAgeRating = ratingDAO.getRatingOfFilm(film);
+        if (filmAgeRating != null) {
+            film.getMpa().setId(filmAgeRating.getId());
+            film.getMpa().setName(filmAgeRating.getName());
+        }
+
+        // Лайки
+        Set<Long> filmLikes = likeDAO.getLikesOfFilm(film);
+        if (!filmLikes.isEmpty()) {
+            film.getFilmLikedUsersId().addAll(filmLikes);
+        }
+
+        // Режиссеры
+        Set<Director> directors = loadDirector(film.getId());
+        if (!directors.isEmpty()) {
+            film.getDirectors().addAll(directors);
+        }
     }
 
     private void addDirectors(Film film) {
@@ -355,14 +391,16 @@ public class FilmDbStorage implements FilmStorage {
                 .map(directorId -> new Object[]{film.getId(), directorId})
                 .toList();
 
-        jdbc.batchUpdate(query, batchArgs);
+        if (!batchArgs.isEmpty()) {
+            jdbc.batchUpdate(query, batchArgs);
+        }
     }
 
     private Set<Director> loadDirector(Long filmId) {
         String query = "SELECT d.id, d.name " +
-                "FROM directors AS d " +
-                "JOIN film_directors AS f_d ON d.id = f_d.director_id " +
-                "WHERE f_d.film_id = ? ";
+                "FROM directors d " +
+                "JOIN film_directors fd ON d.id = fd.director_id " +
+                "WHERE fd.film_id = ?";
 
         return new HashSet<>(jdbc.query(query, directorRowMapper, filmId));
     }
@@ -370,73 +408,5 @@ public class FilmDbStorage implements FilmStorage {
     private void removeDirectorFromFilm(Long id) {
         String query = "DELETE FROM film_directors WHERE film_id = ?";
         jdbc.update(query, id);
-    }
-
-    @Override
-    public List<Film> searchFilms(String query, List<String> criteria) {
-        log.info("Начат процесс поиска фильмов по запросу: '{}' с критериями: {}", query, criteria);
-
-        String searchQuery = query.toLowerCase();
-
-        StringBuilder sql = new StringBuilder(
-                "SELECT DISTINCT f.id, f.name, f.description, f.release_date, f.duration " +
-                        "FROM films f " +
-                        "LEFT JOIN film_directors fd ON f.id = fd.film_id " +
-                        "LEFT JOIN directors d ON fd.director_id = d.id " +
-                        "LEFT JOIN film_likes fl ON f.id = fl.film_id "
-        );
-
-        List<String> conditions = new ArrayList<>();
-        List<Object> params = new ArrayList<>();
-
-        if (criteria.contains("title")) {
-            conditions.add("LOWER(f.name) LIKE ?");
-            params.add("%" + searchQuery + "%");
-        }
-
-        if (criteria.contains("director")) {
-            conditions.add("LOWER(d.name) LIKE ?");
-            params.add("%" + searchQuery + "%");
-        }
-
-        if (conditions.size() == 2) {
-            sql.append("WHERE (").append(String.join(" OR ", conditions)).append(") ");
-        } else if (conditions.size() == 1) {
-            sql.append("WHERE ").append(conditions.get(0)).append(" ");
-        } else {
-            log.warn("Критерии поиска не указаны. Возвращаем пустой список.");
-            return new ArrayList<>();
-        }
-
-        sql.append("GROUP BY f.id ");
-        sql.append("ORDER BY COUNT(fl.user_id) DESC");
-
-        try {
-            List<Film> films = jdbc.query(sql.toString(), mapper, params.toArray());
-
-            for (Film film : films) {
-                List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
-                film.getGenres().addAll(filmGenres);
-
-                FilmAgeRating filmAgeRating = ratingDAO.getRatingOfFilm(film);
-                if (filmAgeRating != null) {
-                    film.getMpa().setId(filmAgeRating.getId());
-                    film.getMpa().setName(filmAgeRating.getName());
-                }
-
-                Set<Long> filmLikes = likeDAO.getLikesOfFilm(film);
-                film.getFilmLikedUsersId().addAll(filmLikes);
-
-                Set<Director> directors = loadDirector(film.getId());
-                film.getDirectors().addAll(directors);
-            }
-
-            log.info("Найдено {} фильмов по запросу: '{}'", films.size(), query);
-            return films;
-
-        } catch (DataAccessException e) {
-            log.error("Ошибка при поиске фильмов: {}", e.getMessage(), e);
-            throw new DataBaseException("Не удалось выполнить поиск фильмов.");
-        }
     }
 }

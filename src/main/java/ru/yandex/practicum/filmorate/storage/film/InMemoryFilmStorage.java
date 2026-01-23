@@ -127,7 +127,6 @@ public class InMemoryFilmStorage implements FilmStorage {
         log.info("Поиск фильмов in-memory по запросу: '{}' с критериями: {}", query, criteria);
 
         if (query == null || query.trim().isEmpty()) {
-            log.warn("Запрос поиска пустой");
             return new ArrayList<>();
         }
 
@@ -153,11 +152,22 @@ public class InMemoryFilmStorage implements FilmStorage {
                     return matches;
                 })
                 .sorted((f1, f2) -> {
-                    // Сортировка по популярности (количеству лайков)
+                    // Сортировка по количеству лайков (убывающий порядок)
                     int likes1 = f1.getFilmLikedUsersId().size();
                     int likes2 = f2.getFilmLikedUsersId().size();
-                    return Integer.compare(likes2, likes1); // Убывающий порядок
+                    return Integer.compare(likes2, likes1);
                 })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Film> getMostPopularFilms(int count) {
+        log.info("Получение {} самых популярных фильмов (in-memory)", count);
+
+        return films.values().stream()
+                .sorted((f1, f2) ->
+                        Integer.compare(f2.getFilmLikedUsersId().size(), f1.getFilmLikedUsersId().size()))
+                .limit(count)
                 .collect(Collectors.toList());
     }
 

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
@@ -17,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/films")
 @Validated
+@Slf4j
 public class FilmController {
     private final FilmService filmService;
 
@@ -97,8 +99,16 @@ public class FilmController {
     @GetMapping("/search")
     public List<Film> searchFilms(
             @RequestParam(name = "query") String query,
-            @RequestParam(name = "by", required = false, defaultValue = "title,director") String by) {
+            @RequestParam(name = "by", required = false) String by) {
 
-        return filmService.searchFilms(query, by);
+        log.info("=== КОНТРОЛЛЕР ПОИСКА ===");
+        log.info("Параметры: query='{}', by='{}'", query, by);
+
+        try {
+            return filmService.searchFilms(query, by);
+        } catch (Exception e) {
+            log.error("Ошибка в контроллере поиска: ", e);
+            throw e; // Пусть Spring обработает исключение
+        }
     }
 }

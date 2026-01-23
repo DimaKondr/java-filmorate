@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAO;
 import ru.yandex.practicum.filmorate.dao.like.LikeDAO;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.SortType;
 import ru.yandex.practicum.filmorate.model.Operation;
@@ -64,58 +65,188 @@ public class FilmService {
     }
 
     public List<Film> getMostPopularFilms(Long mostPopularFilmCount) {
+        log.info("=== ПОЛУЧЕНИЕ ПОПУЛЯРНЫХ ФИЛЬМОВ ===");
+        log.info("Запрошено {} популярных фильмов", mostPopularFilmCount);
+
         List<Long> idOfMostPopularFilms = likeDAO.getIdOfMostPopularFilms(mostPopularFilmCount);
+        log.info("Найдено {} ID популярных фильмов", idOfMostPopularFilms.size());
+
         List<Film> mostPopularFilms = new ArrayList<>();
 
         for (Long id : idOfMostPopularFilms) {
-            mostPopularFilms.add(filmStorage.getFilmById(id));
+            log.debug("Получаем фильм с ID: {}", id);
+            try {
+                Film film = filmStorage.getFilmById(id);
+                mostPopularFilms.add(film);
+                log.debug("Фильм с ID: {} добавлен в результат", id);
+            } catch (Exception e) {
+                log.error("Ошибка при получении фильма с ID: {}: {}", id, e.getMessage());
+            }
         }
+
+        log.info("=== ПОПУЛЯРНЫЕ ФИЛЬМЫ ПОЛУЧЕНЫ ===");
+        log.info("Возвращаем {} фильмов", mostPopularFilms.size());
         return mostPopularFilms;
     }
 
     public List<Film> getFilmsByDirector(Long directorId, SortType sortType) {
-       return switch (sortType) {
-           case LIKES -> filmStorage.getFilmsByDirectorSortedByLikes(directorId);
-           case YEAR -> filmStorage.getFilmsByDirectorSortedByYear(directorId);
-       };
+        log.info("Получение фильмов режиссера ID: {} с сортировкой: {}", directorId, sortType);
+        return switch (sortType) {
+            case LIKES -> filmStorage.getFilmsByDirectorSortedByLikes(directorId);
+            case YEAR -> filmStorage.getFilmsByDirectorSortedByYear(directorId);
+        };
     }
 
     public List<Film> searchFilms(String query, String by) {
-        log.info("Поиск фильмов по запросу: '{}', критерии: {}", query, by);
+        log.info("=== НАЧАЛО ПОИСКА ФИЛЬМОВ ===");
+        log.info("Входные параметры: query='{}', by='{}'", query, by);
 
-        if (query == null || query.trim().isEmpty()) {
-            log.warn("Запрос поиска пустой или null");
-            return new ArrayList<>();
+        if (query == null) {
+            log.warn("Запрос поиска null, возвращаем пустой список");
+            return Collections.emptyList();
         }
 
-        List<String> criteria = parseSearchCriteria(by);
+        String trimmedQuery = query.trim();
+        log.debug("Обрезанный запрос: '{}'", trimmedQuery);
 
-        return filmStorage.searchFilms(query, criteria);
-    }
+        if (trimmedQuery.isEmpty()) {
+            log.warn("Запрос поиска пустой, возвращаем пустой список");
+            return Collections.emptyList();
+        }
 
-    private List<String> parseSearchCriteria(String by) {
-        List<String> criteria = new ArrayList<>();
+        // Проверка на минимальную длину запроса
+        if (trimmedQuery.length() < 1) {
+            log.warn("Слишком короткий запрос поиска: '{}'", trimmedQuery);
+            return Collections.emptyList();
+        }
 
-        if (by == null || by.trim().isEmpty()) {
-            criteria.add("title");
-            criteria.add("director");
-        } else {
-            String[] parts = by.split(",");
-            for (String part : parts) {
-                String trimmed = part.trim().toLowerCase();
-                if ("title".equals(trimmed) || "director".equals(trimmed)) {
-                    if (!criteria.contains(trimmed)) {
-                        criteria.add(trimmed);
-                    }
-                }
-            }
+        try {
+            // Нормализация параметра by
+            String normalizedBy = normalizeSearchByParameter(by);
+            log.info("Нормализованный параметр by: '{}'", normalizedBy);
+
+            // Парсинг критериев
+            List<String> criteria = parseSearchCriteria(normalizedBy);
+            log.info("Критерии поиска после парсинга: {}", criteria);
 
             if (criteria.isEmpty()) {
+                log.warn("Нет допустимых критериев поиска, используем оба");
                 criteria.add("title");
                 criteria.add("director");
             }
+
+            // Выполнение поиска
+            log.info("Вызываем filmStorage.searchFilms('{}', {})", trimmedQuery, criteria);
+            List<Film> result = filmStorage.searchFilms(trimmedQuery, criteria);
+
+            log.info("=== РЕЗУЛЬТАТ ПОИСКА ===");
+            log.info("Найдено фильмов: {}", result.size());
+
+            if (result.isEmpty()) {
+                log.info("Фильмы по запросу '{}' не найдены", trimmedQuery);
+            } else {
+                log.debug("Пример найденных фильмов:");
+                for (int i = 0; i < Math.min(result.size(), 3); i++) {
+                    Film film = result.get(i);
+                    log.debug("  {}. ID: {}, Название: '{}', Режиссеры: {}",
+                            i + 1, film.getId(), film.getName(),
+                            film.getDirectors().stream().map(d -> d.getName()).toList());
+                }
+            }
+
+            return result;
+
+        } catch (ValidationException e) {
+            log.error("Ошибка валидации при поиске: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("=== ОШИБКА ПОИСКА ===");
+            log.error("Тип ошибки: {}", e.getClass().getName());
+            log.error("Сообщение: {}", e.getMessage());
+            log.error("Трассировка стека:", e);
+
+            // Пробрасываем более информативное исключение
+            throw new ru.yandex.practicum.filmorate.exception.DataBaseException(
+                    "Не удалось выполнить поиск фильмов. Ошибка: " +
+                            (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+        }
+    }
+
+    private String normalizeSearchByParameter(String by) {
+        log.debug("Нормализация параметра by: исходное значение '{}'", by);
+
+        if (by == null) {
+            log.debug("Параметр by null, используем значение по умолчанию");
+            return "title,director";
         }
 
+        String trimmed = by.trim();
+        if (trimmed.isEmpty()) {
+            log.debug("Параметр by пустой, используем значение по умолчанию");
+            return "title,director";
+        }
+
+        // Удаляем все пробелы и приводим к нижнему регистру
+        String normalized = trimmed.replaceAll("\\s+", "").toLowerCase();
+        log.debug("После удаления пробелов: '{}'", normalized);
+
+        // Проверяем, что строка не пустая после обработки
+        if (normalized.isEmpty()) {
+            log.warn("Параметр by стал пустым после обработки, используем значение по умолчанию");
+            return "title,director";
+        }
+
+        log.debug("Нормализованный результат: '{}'", normalized);
+        return normalized;
+    }
+
+    private List<String> parseSearchCriteria(String by) {
+        log.debug("Парсинг критериев из строки: '{}'", by);
+
+        List<String> criteria = new ArrayList<>();
+
+        if (by == null || by.trim().isEmpty()) {
+            log.debug("Строка критериев пустая, используем оба по умолчанию");
+            criteria.add("title");
+            criteria.add("director");
+            return criteria;
+        }
+
+        String[] parts = by.split(",");
+        log.debug("Разделено на {} частей: {}", parts.length, Arrays.toString(parts));
+
+        for (String part : parts) {
+            String trimmed = part.trim().toLowerCase();
+            log.debug("Обработка части: '{}'", trimmed);
+
+            if (trimmed.isEmpty()) {
+                log.debug("Пропускаем пустую часть");
+                continue;
+            }
+
+            if ("title".equals(trimmed)) {
+                if (!criteria.contains("title")) {
+                    criteria.add("title");
+                    log.debug("Добавлен критерий 'title'");
+                }
+            } else if ("director".equals(trimmed)) {
+                if (!criteria.contains("director")) {
+                    criteria.add("director");
+                    log.debug("Добавлен критерий 'director'");
+                }
+            } else {
+                log.warn("Пропускаем недопустимое значение при парсинге критериев: '{}'", trimmed);
+            }
+        }
+
+        // Если после парсинга критерии пустые, используем оба
+        if (criteria.isEmpty()) {
+            log.warn("Не удалось распарсить критерии, используем оба по умолчанию");
+            criteria.add("title");
+            criteria.add("director");
+        }
+
+        log.debug("Результат парсинга критериев: {}", criteria);
         return criteria;
     }
 }
