@@ -79,4 +79,8 @@ public class FilmService {
            case YEAR -> filmStorage.getFilmsByDirectorSortedByYear(directorId);
        };
     }
+
+    public List<Film> getCommonFilms(Long userId, Long friendId) {
+        return filmStorage.getCommonFilms(userId, friendId);
+    }
 }

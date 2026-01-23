@@ -344,6 +344,26 @@ public class FilmDbStorage implements FilmStorage {
         return films;
     }
 
+    @Override
+    public List<Film> getCommonFilms(Long userId, Long friendId) {
+        String query = "SELECT f.id, f.name, f.description, f.release_date, f.duration " +
+                "FROM films AS f " +
+                "JOIN film_likes AS f_l ON f_l.film_id = f.id " +
+                "WHERE f_l.user_id IN (?, ?) " +
+                "GROUP BY f.id, f.name, f.description, f.release_date, f.duration " +
+                "HAVING COUNT(DISTINCT f_l.user_id) = 2 " +
+                "ORDER BY COUNT(f_l.user_id) DESC";
+
+        List<Film> films = jdbc.query(query, mapper, userId, friendId);
+
+        for (Film film : films) {
+            List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
+            film.getGenres().addAll(filmGenres);
+        }
+
+        return films;
+    }
+
     private void addDirectors(Film film) {
         String query = "INSERT INTO film_directors(film_id, director_id) VALUES (?, ?)";
 

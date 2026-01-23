@@ -26,4 +26,7 @@ public interface FilmStorage {
 
     //Вывод всех фильмов режиссёра, отсортированных по годам.
     List<Film> getFilmsByDirectorSortedByYear(Long id);
+
+    //Вывод общих с другом фильмов с сортировкой по их популярности.
+    List<Film> getCommonFilms(Long userId, Long friendId);
 }
