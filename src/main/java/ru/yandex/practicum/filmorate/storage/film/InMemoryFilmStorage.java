@@ -5,12 +5,15 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Director;
 
 import java.time.LocalDate;
 import java.time.Month;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 @Component("inMemoryFilmStorage")
 @Slf4j
@@ -84,7 +87,7 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public List<Film> getAllFilms() {
         log.info("Начат процесс предоставления списка всех фильмов");
-        return films.values().stream().toList();
+        return new ArrayList<>(films.values());
     }
 
     @Override
@@ -107,7 +110,7 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .sorted((f1, f2) ->
                         Integer.compare(f2.getFilmLikedUsersId().size(),
                                 f1.getFilmLikedUsersId().size()))
-                .toList();
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -116,12 +119,50 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .filter(film -> film.getDirectors() != null &&
                         film.getDirectors().stream()
                                 .anyMatch(d -> d.getId().equals(id)))
-                .sorted((f1, f2) ->
-                        f2.getReleaseDate().compareTo(f1.getReleaseDate()))
-                .toList();
+                .sorted((f1, f2) -> f2.getReleaseDate().compareTo(f1.getReleaseDate()))
+                .collect(Collectors.toList());
     }
 
-    //Генерируем ID нового фильма
+    @Override
+    public List<Film> searchFilms(String query, List<String> criteria) {
+        log.info("Поиск фильмов in-memory по запросу: '{}' с критериями: {}", query, criteria);
+
+        if (query == null || query.trim().isEmpty()) {
+            log.warn("Запрос поиска пустой");
+            return new ArrayList<>();
+        }
+
+        String searchQuery = query.toLowerCase().trim();
+
+        return films.values().stream()
+                .filter(film -> {
+                    boolean matches = false;
+
+                    // Поиск по названию
+                    if (criteria.contains("title")) {
+                        matches = film.getName().toLowerCase().contains(searchQuery);
+                    }
+
+                    // Поиск по режиссеру
+                    if (!matches && criteria.contains("director")) {
+                        matches = film.getDirectors().stream()
+                                .anyMatch(director -> director != null &&
+                                        director.getName() != null &&
+                                        director.getName().toLowerCase().contains(searchQuery));
+                    }
+
+                    return matches;
+                })
+                .sorted((f1, f2) -> {
+                    // Сортировка по популярности (количеству лайков)
+                    int likes1 = f1.getFilmLikedUsersId().size();
+                    int likes2 = f2.getFilmLikedUsersId().size();
+                    return Integer.compare(likes2, likes1); // Убывающий порядок
+                })
+                .collect(Collectors.toList());
+    }
+
+    // Генерируем ID нового фильма
     private long getNextId() {
         long currentMaxId = films.keySet()
                 .stream()
@@ -130,5 +171,4 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .orElse(0);
         return ++currentMaxId;
     }
-
 }

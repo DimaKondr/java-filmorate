@@ -26,4 +26,7 @@ public interface FilmStorage {
 
     //Вывод всех фильмов режиссёра, отсортированных по годам.
     List<Film> getFilmsByDirectorSortedByYear(Long id);
+
+    List<Film> searchFilms(String query, List<String> criteria);
+
 }

@@ -24,10 +24,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.time.LocalDate;
 import java.time.Month;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 @Repository("filmDbStorage")
 @RequiredArgsConstructor
@@ -373,5 +370,73 @@ public class FilmDbStorage implements FilmStorage {
     private void removeDirectorFromFilm(Long id) {
         String query = "DELETE FROM film_directors WHERE film_id = ?";
         jdbc.update(query, id);
+    }
+
+    @Override
+    public List<Film> searchFilms(String query, List<String> criteria) {
+        log.info("Начат процесс поиска фильмов по запросу: '{}' с критериями: {}", query, criteria);
+
+        String searchQuery = query.toLowerCase();
+
+        StringBuilder sql = new StringBuilder(
+                "SELECT DISTINCT f.id, f.name, f.description, f.release_date, f.duration " +
+                        "FROM films f " +
+                        "LEFT JOIN film_directors fd ON f.id = fd.film_id " +
+                        "LEFT JOIN directors d ON fd.director_id = d.id " +
+                        "LEFT JOIN film_likes fl ON f.id = fl.film_id "
+        );
+
+        List<String> conditions = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+
+        if (criteria.contains("title")) {
+            conditions.add("LOWER(f.name) LIKE ?");
+            params.add("%" + searchQuery + "%");
+        }
+
+        if (criteria.contains("director")) {
+            conditions.add("LOWER(d.name) LIKE ?");
+            params.add("%" + searchQuery + "%");
+        }
+
+        if (conditions.size() == 2) {
+            sql.append("WHERE (").append(String.join(" OR ", conditions)).append(") ");
+        } else if (conditions.size() == 1) {
+            sql.append("WHERE ").append(conditions.get(0)).append(" ");
+        } else {
+            log.warn("Критерии поиска не указаны. Возвращаем пустой список.");
+            return new ArrayList<>();
+        }
+
+        sql.append("GROUP BY f.id ");
+        sql.append("ORDER BY COUNT(fl.user_id) DESC");
+
+        try {
+            List<Film> films = jdbc.query(sql.toString(), mapper, params.toArray());
+
+            for (Film film : films) {
+                List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
+                film.getGenres().addAll(filmGenres);
+
+                FilmAgeRating filmAgeRating = ratingDAO.getRatingOfFilm(film);
+                if (filmAgeRating != null) {
+                    film.getMpa().setId(filmAgeRating.getId());
+                    film.getMpa().setName(filmAgeRating.getName());
+                }
+
+                Set<Long> filmLikes = likeDAO.getLikesOfFilm(film);
+                film.getFilmLikedUsersId().addAll(filmLikes);
+
+                Set<Director> directors = loadDirector(film.getId());
+                film.getDirectors().addAll(directors);
+            }
+
+            log.info("Найдено {} фильмов по запросу: '{}'", films.size(), query);
+            return films;
+
+        } catch (DataAccessException e) {
+            log.error("Ошибка при поиске фильмов: {}", e.getMessage(), e);
+            throw new DataBaseException("Не удалось выполнить поиск фильмов.");
+        }
     }
 }

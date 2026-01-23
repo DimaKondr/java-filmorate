@@ -79,4 +79,43 @@ public class FilmService {
            case YEAR -> filmStorage.getFilmsByDirectorSortedByYear(directorId);
        };
     }
+
+    public List<Film> searchFilms(String query, String by) {
+        log.info("Поиск фильмов по запросу: '{}', критерии: {}", query, by);
+
+        if (query == null || query.trim().isEmpty()) {
+            log.warn("Запрос поиска пустой или null");
+            return new ArrayList<>();
+        }
+
+        List<String> criteria = parseSearchCriteria(by);
+
+        return filmStorage.searchFilms(query, criteria);
+    }
+
+    private List<String> parseSearchCriteria(String by) {
+        List<String> criteria = new ArrayList<>();
+
+        if (by == null || by.trim().isEmpty()) {
+            criteria.add("title");
+            criteria.add("director");
+        } else {
+            String[] parts = by.split(",");
+            for (String part : parts) {
+                String trimmed = part.trim().toLowerCase();
+                if ("title".equals(trimmed) || "director".equals(trimmed)) {
+                    if (!criteria.contains(trimmed)) {
+                        criteria.add(trimmed);
+                    }
+                }
+            }
+
+            if (criteria.isEmpty()) {
+                criteria.add("title");
+                criteria.add("director");
+            }
+        }
+
+        return criteria;
+    }
 }

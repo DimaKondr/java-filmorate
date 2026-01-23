@@ -93,4 +93,12 @@ public class FilmController {
                                          @RequestParam(name = "sortBy", defaultValue = "year") String sortBy) {
         return filmService.getFilmsByDirector(directorId, SortType.valueOf(sortBy.toUpperCase()));
     }
+
+    @GetMapping("/search")
+    public List<Film> searchFilms(
+            @RequestParam(name = "query") String query,
+            @RequestParam(name = "by", required = false, defaultValue = "title,director") String by) {
+
+        return filmService.searchFilms(query, by);
+    }
 }
