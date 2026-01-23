@@ -63,14 +63,8 @@ public class FilmService {
         return film;
     }
 
-    public List<Film> getMostPopularFilms(Long mostPopularFilmCount) {
-        List<Long> idOfMostPopularFilms = likeDAO.getIdOfMostPopularFilms(mostPopularFilmCount);
-        List<Film> mostPopularFilms = new ArrayList<>();
-
-        for (Long id : idOfMostPopularFilms) {
-            mostPopularFilms.add(filmStorage.getFilmById(id));
-        }
-        return mostPopularFilms;
+    public List<Film> getMostPopularFilms(Long count, Long genreId, Long year) {
+        return likeDAO.getMostPopularFilms(count, genreId, year);
     }
 
     public List<Film> getFilmsByDirector(Long directorId, SortType sortType) {

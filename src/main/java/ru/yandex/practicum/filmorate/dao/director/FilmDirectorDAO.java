@@ -44,7 +44,6 @@ public class FilmDirectorDAO implements DirectorDAO {
 
         try {
             return jdbc.query(query, mapper);
-
         } catch (DataAccessException e) {
             throw new DataBaseException("Не удалось получить список всех режиссеров.");
         }

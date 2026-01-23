@@ -97,8 +97,7 @@ public class FilmDbStorage implements FilmStorage {
     @Transactional
     public Film removeFilm(Long filmId) {
         log.info("Удаление фильма с ID: {}", filmId);
-
-        Film film = getFilmById(filmId); // Сам выбросит NotFoundException
+        Film film = getFilmById(filmId);
 
         try {
             jdbc.update("DELETE FROM films WHERE id = ?", filmId);
