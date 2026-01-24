@@ -88,11 +88,7 @@ public class UserService {
 
     public List<UserFeed> getFeedByUserId(Long userId) {
         log.info("Получение ленты событий пользователя с ID: {}", userId);
-
-
         userStorage.getUserById(userId);
-
-
         List<UserFeed> feed = userFeedDAO.getFeedByUserId(userId);
 
         log.info("Найдено {} событий для пользователя с ID: {}", feed.size(), userId);
