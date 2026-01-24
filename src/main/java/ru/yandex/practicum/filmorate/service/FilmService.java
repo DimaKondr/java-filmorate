@@ -64,29 +64,53 @@ public class FilmService {
         return film;
     }
 
-    public List<Film> getMostPopularFilms(Long mostPopularFilmCount) {
+    public List<Film> getMostPopularFilms(Long count, Long genreId, Long year) {
         log.info("=== ПОЛУЧЕНИЕ ПОПУЛЯРНЫХ ФИЛЬМОВ ===");
-        log.info("Запрошено {} популярных фильмов", mostPopularFilmCount);
+        log.info("Параметры: count={}, genreId={}, year={}", count, genreId, year);
 
-        List<Long> idOfMostPopularFilms = likeDAO.getIdOfMostPopularFilms(mostPopularFilmCount);
-        log.info("Найдено {} ID популярных фильмов", idOfMostPopularFilms.size());
+        // Используем метод из FilmStorage (ваш текущий FilmDbStorage уже имеет его)
+        List<Film> allPopularFilms = filmStorage.getMostPopularFilms(count.intValue());
 
-        List<Film> mostPopularFilms = new ArrayList<>();
+        // Если нет фильтрации, возвращаем как есть
+        if (genreId == null && year == null) {
+            log.info("Без фильтрации, возвращаем {} фильмов", allPopularFilms.size());
+            return allPopularFilms;
+        }
 
-        for (Long id : idOfMostPopularFilms) {
-            log.debug("Получаем фильм с ID: {}", id);
-            try {
-                Film film = filmStorage.getFilmById(id);
-                mostPopularFilms.add(film);
-                log.debug("Фильм с ID: {} добавлен в результат", id);
-            } catch (Exception e) {
-                log.error("Ошибка при получении фильма с ID: {}: {}", id, e.getMessage());
+        // Фильтруем результаты
+        List<Film> filteredFilms = new ArrayList<>();
+
+        for (Film film : allPopularFilms) {
+            boolean passesFilter = true;
+
+            // Фильтрация по жанру
+            if (genreId != null) {
+                boolean hasGenre = film.getGenres().stream()
+                        .anyMatch(genre -> genreId.equals(genre.getId()));
+                if (!hasGenre) {
+                    passesFilter = false;
+                    log.debug("Фильм ID {} не имеет жанра ID {}, пропускаем", film.getId(), genreId);
+                }
+            }
+
+            // Фильтрация по году
+            if (year != null && passesFilter) {
+                if (film.getReleaseDate().getYear() != year) {
+                    passesFilter = false;
+                    log.debug("Фильм ID {} имеет год {}, а нужен {}, пропускаем",
+                            film.getId(), film.getReleaseDate().getYear(), year);
+                }
+            }
+
+            if (passesFilter) {
+                filteredFilms.add(film);
+                log.debug("Фильм ID {} прошел фильтрацию", film.getId());
             }
         }
 
         log.info("=== ПОПУЛЯРНЫЕ ФИЛЬМЫ ПОЛУЧЕНЫ ===");
-        log.info("Возвращаем {} фильмов", mostPopularFilms.size());
-        return mostPopularFilms;
+        log.info("Возвращаем {} отфильтрованных фильмов", filteredFilms.size());
+        return filteredFilms;
     }
 
     public List<Film> getFilmsByDirector(Long directorId, SortType sortType) {
