@@ -165,15 +165,23 @@ public class FilmDbStorage implements FilmStorage {
             throw new DataBaseException("Не удалось обновить данные фильма.");
         }
 
-        if (!oldFilm.getGenres().equals(updatedFilm.getGenres())) {
+        // Очищаем и обновляем жанры
+        oldFilm.getGenres().clear();
+        if (!updatedFilm.getGenres().isEmpty()) {
             genreDAO.removeFilmsGenres(oldFilm);
             genreDAO.addGenreToFilm(updatedFilm);
+            oldFilm.getGenres().addAll(updatedFilm.getGenres());
         }
+
+        // Обновляем рейтинг MPA
         if (updatedFilm.getMpa().getId() != null && !updatedFilm.getMpa().getId().equals(oldFilm.getMpa().getId())) {
             ratingDAO.removeFilmRating(oldFilm);
             ratingDAO.addRatingToFilm(updatedFilm);
+            oldFilm.getMpa().setId(updatedFilm.getMpa().getId());
+            oldFilm.getMpa().setName(updatedFilm.getMpa().getName());
         }
 
+        // Обновляем режиссеров
         if (!oldFilm.getDirectors().equals(updatedFilm.getDirectors())) {
             removeDirectorFromFilm(oldFilm.getId());
             addDirectors(updatedFilm);
@@ -193,16 +201,12 @@ public class FilmDbStorage implements FilmStorage {
             log.info("Начат процесс предоставления списка всех фильмов.");
             List<Film> films = jdbc.query(query, mapper);
 
-            if (!films.isEmpty()) {
-                for (Film film : films) {
-                    fillFilmAdditionalData(film);
-                }
-                log.info("Список всех фильмов успешно предоставлен.");
-                return films;
-            } else {
-                log.info("Список всех фильмов пуст.");
-                return films;
+            for (Film film : films) {
+                fillFilmAdditionalData(film);
             }
+
+            log.info("Список всех фильмов успешно предоставлен. Найдено {} фильмов.", films.size());
+            return films;
         } catch (DataAccessException e) {
             log.error("Неудачная попытка получения списка всех фильмов. --> {}", e.getMessage());
             throw new DataBaseException("Не удалось получить список всех фильмов.");
@@ -229,6 +233,17 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> getFilmsByDirectorSortedByLikes(Long directorId) {
+        log.info("Получение фильмов режиссера {} отсортированных по лайкам", directorId);
+
+        // Проверяем существование режиссера
+        String checkDirectorQuery = "SELECT COUNT(*) FROM directors WHERE id = ?";
+        Integer directorCount = jdbc.queryForObject(checkDirectorQuery, Integer.class, directorId);
+
+        if (directorCount == null || directorCount == 0) {
+            log.warn("Режиссер с ID {} не найден", directorId);
+            return new ArrayList<>();
+        }
+
         String query = "SELECT f.* " +
                 "FROM films f " +
                 "JOIN film_directors fd ON f.id = fd.film_id " +
@@ -237,29 +252,52 @@ public class FilmDbStorage implements FilmStorage {
                 "GROUP BY f.id " +
                 "ORDER BY COUNT(fl.user_id) DESC";
 
-        List<Film> films = jdbc.query(query, mapper, directorId);
+        try {
+            List<Film> films = jdbc.query(query, mapper, directorId);
 
-        for (Film film : films) {
-            fillFilmAdditionalData(film);
+            for (Film film : films) {
+                fillFilmAdditionalData(film);
+            }
+
+            log.info("Найдено {} фильмов режиссера {}, отсортированных по лайкам", films.size(), directorId);
+            return films;
+        } catch (DataAccessException e) {
+            log.error("Ошибка при получении фильмов режиссера {}: {}", directorId, e.getMessage());
+            return new ArrayList<>();
         }
-
-        return films;
     }
 
     @Override
     public List<Film> getFilmsByDirectorSortedByYear(Long directorId) {
+        log.info("Получение фильмов режиссера {} отсортированных по году", directorId);
+
+        // Проверяем существование режиссера
+        String checkDirectorQuery = "SELECT COUNT(*) FROM directors WHERE id = ?";
+        Integer directorCount = jdbc.queryForObject(checkDirectorQuery, Integer.class, directorId);
+
+        if (directorCount == null || directorCount == 0) {
+            log.warn("Режиссер с ID {} не найден", directorId);
+            return new ArrayList<>();
+        }
+
         String query = "SELECT f.* FROM films f " +
                 "JOIN film_directors fd ON f.id = fd.film_id " +
                 "WHERE fd.director_id = ? " +
-                "ORDER BY f.release_date";
+                "ORDER BY f.release_date ASC";
 
-        List<Film> films = jdbc.query(query, mapper, directorId);
+        try {
+            List<Film> films = jdbc.query(query, mapper, directorId);
 
-        for (Film film : films) {
-            fillFilmAdditionalData(film);
+            for (Film film : films) {
+                fillFilmAdditionalData(film);
+            }
+
+            log.info("Найдено {} фильмов режиссера {}, отсортированных по году", films.size(), directorId);
+            return films;
+        } catch (DataAccessException e) {
+            log.error("Ошибка при получении фильмов режиссера {}: {}", directorId, e.getMessage());
+            return new ArrayList<>();
         }
-
-        return films;
     }
 
     @Override
@@ -351,40 +389,49 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private void fillFilmAdditionalData(Film film) {
-        // Жанры
-        List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
-        if (!filmGenres.isEmpty()) {
-            film.getGenres().addAll(filmGenres);
+        if (film == null) {
+            return;
         }
 
-        // Рейтинг MPA
-        FilmAgeRating filmAgeRating = ratingDAO.getRatingOfFilm(film);
-        if (filmAgeRating != null) {
-            film.getMpa().setId(filmAgeRating.getId());
-            film.getMpa().setName(filmAgeRating.getName());
-        }
+        try {
+            // Жанры - коллекция уже инициализирована в конструкторе Film
+            List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
+            if (filmGenres != null && !filmGenres.isEmpty()) {
+                film.getGenres().addAll(filmGenres);
+            }
 
-        // Лайки
-        Set<Long> filmLikes = likeDAO.getLikesOfFilm(film);
-        if (!filmLikes.isEmpty()) {
-            film.getFilmLikedUsersId().addAll(filmLikes);
-        }
+            // Рейтинг MPA - объект уже инициализирован в конструкторе Film
+            FilmAgeRating filmAgeRating = ratingDAO.getRatingOfFilm(film);
+            if (filmAgeRating != null) {
+                film.getMpa().setId(filmAgeRating.getId());
+                film.getMpa().setName(filmAgeRating.getName());
+            }
 
-        // Режиссеры
-        Set<Director> directors = loadDirector(film.getId());
-        if (!directors.isEmpty()) {
-            film.getDirectors().addAll(directors);
+            // Лайки - коллекция уже инициализирована в конструкторе Film
+            Set<Long> filmLikes = likeDAO.getLikesOfFilm(film);
+            if (filmLikes != null && !filmLikes.isEmpty()) {
+                film.getFilmLikedUsersId().addAll(filmLikes);
+            }
+
+            // Режиссеры - коллекция уже инициализирована в конструкторе Film
+            Set<Director> directors = loadDirector(film.getId());
+            if (directors != null && !directors.isEmpty()) {
+                film.getDirectors().addAll(directors);
+            }
+        } catch (Exception e) {
+            log.warn("Ошибка при заполнении дополнительных данных фильма {}: {}", film.getId(), e.getMessage());
         }
     }
 
     private void addDirectors(Film film) {
-        String query = "INSERT INTO film_directors(film_id, director_id) VALUES (?, ?)";
-
-        if (film.getDirectors() == null || film.getDirectors().isEmpty()) {
+        if (film == null || film.getId() == null || film.getDirectors().isEmpty()) {
             return;
         }
 
+        String query = "INSERT INTO film_directors(film_id, director_id) VALUES (?, ?)";
+
         List<Object[]> batchArgs = film.getDirectors().stream()
+                .filter(Objects::nonNull)
                 .map(Director::getId)
                 .filter(Objects::nonNull)
                 .distinct()
@@ -392,21 +439,43 @@ public class FilmDbStorage implements FilmStorage {
                 .toList();
 
         if (!batchArgs.isEmpty()) {
-            jdbc.batchUpdate(query, batchArgs);
+            try {
+                jdbc.batchUpdate(query, batchArgs);
+            } catch (DataAccessException e) {
+                log.error("Ошибка при добавлении режиссеров к фильму {}: {}", film.getId(), e.getMessage());
+            }
         }
     }
 
     private Set<Director> loadDirector(Long filmId) {
+        if (filmId == null) {
+            return new HashSet<>();
+        }
+
         String query = "SELECT d.id, d.name " +
                 "FROM directors d " +
                 "JOIN film_directors fd ON d.id = fd.director_id " +
                 "WHERE fd.film_id = ?";
 
-        return new HashSet<>(jdbc.query(query, directorRowMapper, filmId));
+        try {
+            List<Director> directors = jdbc.query(query, directorRowMapper, filmId);
+            return directors != null ? new HashSet<>(directors) : new HashSet<>();
+        } catch (Exception e) {
+            log.warn("Ошибка при загрузке режиссеров для фильма {}: {}", filmId, e.getMessage());
+            return new HashSet<>();
+        }
     }
 
     private void removeDirectorFromFilm(Long id) {
+        if (id == null) {
+            return;
+        }
+
         String query = "DELETE FROM film_directors WHERE film_id = ?";
-        jdbc.update(query, id);
+        try {
+            jdbc.update(query, id);
+        } catch (DataAccessException e) {
+            log.error("Ошибка при удалении режиссеров из фильма {}: {}", id, e.getMessage());
+        }
     }
 }
