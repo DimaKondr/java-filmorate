@@ -5,11 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAO;
 import ru.yandex.practicum.filmorate.dao.friendship.FriendshipDAO;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
+import ru.yandex.practicum.filmorate.model.Operation;
+import ru.yandex.practicum.filmorate.model.UserFeed;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.util.*;
@@ -22,12 +25,17 @@ public class UserService {
     private final UserStorage userStorage;
     private final FriendshipDAO friendshipDAO;
     private final FilmStorage filmStorage;
+    private final UserFeedDAO userFeedDAO;
+
 
     @Autowired
-    public UserService(@Qualifier("userDbStorage") UserStorage userStorage, FriendshipDAO friendshipDAO, @Qualifier("filmDbStorage") FilmStorage filmStorage) {
+    public UserService(@Qualifier("userDbStorage") UserStorage userStorage,
+                       FriendshipDAO friendshipDAO, @Qualifier("filmDbStorage") FilmStorage filmStorage,
+                       UserFeedDAO userFeedDAO) {
         this.userStorage = userStorage;
         this.friendshipDAO = friendshipDAO;
         this.filmStorage = filmStorage;
+        this.userFeedDAO = userFeedDAO;
     }
 
     public User addFriend(Long userId, Long addedFriendsId) {
@@ -40,7 +48,12 @@ public class UserService {
         User user = userStorage.getUserById(userId);
         User addedFriend = userStorage.getUserById(addedFriendsId);
         log.info("Начат процесс добавления друга с ID: {} к пользователю с ID: {}.", addedFriendsId, userId);
-        return friendshipDAO.addFriendToUser(user, addedFriend);
+
+        User result = friendshipDAO.addFriendToUser(user, addedFriend);
+
+        userFeedDAO.addFriendEvent(userId, addedFriendsId, Operation.ADD);
+
+        return result;
     }
 
     public User removeFriend(Long userId, Long removedFriendsId) {
@@ -53,7 +66,12 @@ public class UserService {
         User user = userStorage.getUserById(userId);
         User removedFriend = userStorage.getUserById(removedFriendsId);
         log.info("Начат процесс удаления друга с ID: {} у пользователя с ID: {}.", removedFriendsId, userId);
-        return friendshipDAO.removeFriendFromUser(user, removedFriend);
+
+        User result = friendshipDAO.removeFriendFromUser(user, removedFriend);
+
+        userFeedDAO.addFriendEvent(userId, removedFriendsId, Operation.REMOVE);
+
+        return result;
     }
 
     public List<User> getFriendsListOfUser(Long userId) {
@@ -208,6 +226,15 @@ public class UserService {
         log.info("=== РЕЗУЛЬТАТ: Найдено {} рекомендаций для пользователя {} ===",
                 recommendations.size(), userId);
         return recommendations;
+    }
+
+    public List<UserFeed> getFeedByUserId(Long userId) {
+        log.info("Получение ленты событий пользователя с ID: {}", userId);
+        userStorage.getUserById(userId);
+        List<UserFeed> feed = userFeedDAO.getFeedByUserId(userId);
+
+        log.info("Найдено {} событий для пользователя с ID: {}", feed.size(), userId);
+        return feed;
     }
 
 }

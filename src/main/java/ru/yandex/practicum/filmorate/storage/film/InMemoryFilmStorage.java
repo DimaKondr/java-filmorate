@@ -98,6 +98,29 @@ public class InMemoryFilmStorage implements FilmStorage {
         throw new NotFoundException("Попытка получения фильма. Фильм с ID: " + filmId + " не найден");
     }
 
+    @Override
+    public List<Film> getFilmsByDirectorSortedByLikes(Long id) {
+        return films.values().stream()
+                .filter(film -> film.getDirectors() != null &&
+                        film.getDirectors().stream()
+                                .anyMatch(d -> d.getId().equals(id)))
+                .sorted((f1, f2) ->
+                        Integer.compare(f2.getFilmLikedUsersId().size(),
+                                f1.getFilmLikedUsersId().size()))
+                .toList();
+    }
+
+    @Override
+    public List<Film> getFilmsByDirectorSortedByYear(Long id) {
+        return films.values().stream()
+                .filter(film -> film.getDirectors() != null &&
+                        film.getDirectors().stream()
+                                .anyMatch(d -> d.getId().equals(id)))
+                .sorted((f1, f2) ->
+                        f2.getReleaseDate().compareTo(f1.getReleaseDate()))
+                .toList();
+    }
+
     //Генерируем ID нового фильма
     private long getNextId() {
         long currentMaxId = films.keySet()

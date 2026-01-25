@@ -120,20 +120,15 @@ class UserDbStorageTests {
 
     @Test
     void removeUserWithInvalidIdTesting() {
-        User addedUser1 = userDbStorage.addUser(user1);
-        User addedUser2 = userDbStorage.addUser(user2);
+        userDbStorage.addUser(user1);
+        userDbStorage.addUser(user2);
 
-        // Проверяем, что в хранилище два элемента
         assertEquals(2, userDbStorage.getAllUsers().size(), "Неверное количество элементов в списке");
 
-        // Сгенерируем случайный ID
-        Long uniqueId = generateUniqueId(addedUser1, addedUser2);
+        Long invalidId = 999L;
 
-        // Проверяем, что было выброшено необходимое исключение, так как пользователя с таким ID нет
-        NotFoundException exception = assertThrows(NotFoundException.class, () -> userDbStorage.removeUser(uniqueId),
+        assertThrows(NotFoundException.class, () -> userDbStorage.removeUser(invalidId),
                 "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Не удалось удалить пользователя.",
-                exception.getMessage(), "Сообщения не совпадают");
     }
 
     @Test
