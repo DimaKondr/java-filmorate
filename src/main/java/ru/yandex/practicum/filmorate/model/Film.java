@@ -17,6 +17,7 @@ public class Film {
     private final Set<FilmGenre> genres = new HashSet<>();
     private final Set<Long> filmLikedUsersId = new HashSet<>();
     private final FilmAgeRating mpa = new FilmAgeRating();
+    private final Set<Director> directors = new HashSet<>();
     private Long id;
 
     @NotBlank(message = "Название не может быть null или пустым")

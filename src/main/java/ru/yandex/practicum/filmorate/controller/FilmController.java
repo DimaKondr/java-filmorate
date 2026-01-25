@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.SortType;
 import ru.yandex.practicum.filmorate.service.FilmService;
 
 import java.util.List;
@@ -81,10 +82,19 @@ public class FilmController {
     }
 
     @GetMapping("/popular")
-    public List<Film> getMostPopularFilms(@RequestParam(name = "count", defaultValue = "10")
+    public List<Film> getMostPopularFilms(@RequestParam(name = "count", required = false, defaultValue = "10")
                                               @Positive(message = "count должен быть больше 0")
-                                              @Valid Long mostPopularFilmCount) {
-        return filmService.getMostPopularFilms(mostPopularFilmCount);
+                                              @Valid Long count,
+                                          @RequestParam(name = "genreId", required = false)
+                                              Long genreId,
+                                          @RequestParam(name = "year", required = false)
+                                              Long year) {
+        return filmService.getMostPopularFilms(count, genreId, year);
     }
 
+    @GetMapping("director/{directorId}")
+    public List<Film> getFilmsByDirector(@PathVariable Long directorId,
+                                         @RequestParam(name = "sortBy", defaultValue = "year") String sortBy) {
+        return filmService.getFilmsByDirector(directorId, SortType.valueOf(sortBy.toUpperCase()));
+    }
 }

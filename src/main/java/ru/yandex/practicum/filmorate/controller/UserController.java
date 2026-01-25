@@ -9,6 +9,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.model.UserFeed;
 import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.util.List;
@@ -100,10 +101,21 @@ public class UserController {
         return userService.getMutualFriendsList(userId, anotherUserId);
     }
 
+
     @GetMapping("/{id}/recommendations")
     public List<Film> getRecommendations(
             @PathVariable Long id,
             @RequestParam(defaultValue = "10") int count) {
         return userService.getRecommendations(id, count);
+    }
+
+    @GetMapping("/{id}/feed")
+    public List<UserFeed> getFeed(
+            @PathVariable("id")
+            @NotNull(message = "id не может быть null")
+            @Min(value = 1, message = "id должен быть положительным целым числом")
+            @Valid Long userId) {
+
+        return userService.getFeedByUserId(userId);
     }
 }
