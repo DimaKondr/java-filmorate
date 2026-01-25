@@ -7,14 +7,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
+import ru.yandex.practicum.filmorate.dao.director.DirectorRowMapper;
 import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAOImpl;
 import ru.yandex.practicum.filmorate.dao.feed.UserFeedRowMapper;
 import ru.yandex.practicum.filmorate.dao.friendship.FriendshipRowMapper;
 import ru.yandex.practicum.filmorate.dao.friendship.UserFriendshipDAO;
+
+import ru.yandex.practicum.filmorate.dao.genre.FilmGenreDAO;
+import ru.yandex.practicum.filmorate.dao.genre.GenreRowMapper;
+import ru.yandex.practicum.filmorate.dao.like.FilmLikeDAO;
+import ru.yandex.practicum.filmorate.dao.rating.FilmAgeRatingDAO;
+import ru.yandex.practicum.filmorate.dao.rating.RatingRowMapper;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.model.UserFeed;
+import ru.yandex.practicum.filmorate.storage.film.FilmDbStorage;
+import ru.yandex.practicum.filmorate.storage.film.FilmRowMapper;
 import ru.yandex.practicum.filmorate.storage.user.UserDbStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserRowMapper;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
@@ -29,12 +38,21 @@ import static org.junit.jupiter.api.Assertions.*;
 @AutoConfigureTestDatabase
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @Import({
+        FilmDbStorage.class,
         UserDbStorage.class,
+        FilmLikeDAO.class,
+        FilmGenreDAO.class,
+        FilmAgeRatingDAO.class,
         UserFriendshipDAO.class,
         UserFeedDAOImpl.class,
         UserFeedRowMapper.class,
         UserService.class,
+        FilmRowMapper.class,
         UserRowMapper.class,
+        GenreRowMapper.class,
+        RatingRowMapper.class,
+        FriendshipRowMapper.class,
+        DirectorRowMapper.class,
         FriendshipRowMapper.class
 })
 class UserServiceTests {
@@ -186,14 +204,13 @@ class UserServiceTests {
         User addedUser1 = userStorage.addUser(user1);
         User addedUser2 = userStorage.addUser(user2);
         userService.addFriend(addedUser1.getId(), addedUser2.getId());
-
-        Long nonExistentId = 999L;
-
+        Long invalidId = 999999L;
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userService.removeFriend(addedUser1.getId(), nonExistentId));
+                () -> userService.removeFriend(addedUser1.getId(), invalidId),
+                "Исключение не выброшено, или выброшено неверное исключение");
+        assertEquals("Попытка получения пользователя. Пользователь с ID: " + invalidId + " не найден",
+                exception.getMessage(), "Сообщения не совпадают");
 
-        assertEquals("Попытка получения пользователя. Пользователь с ID: " + nonExistentId + " не найден",
-                exception.getMessage());
     }
 
     @Test
