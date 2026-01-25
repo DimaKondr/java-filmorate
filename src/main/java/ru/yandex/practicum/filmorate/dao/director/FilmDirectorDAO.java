@@ -9,6 +9,8 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.exception.DataBaseException;
 import ru.yandex.practicum.filmorate.model.Director;
+import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.storage.film.FilmRowMapper;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
@@ -21,6 +23,9 @@ import java.util.Optional;
 public class FilmDirectorDAO implements DirectorDAO {
     private final JdbcTemplate jdbc;
     private final DirectorRowMapper mapper;
+    private final FilmRowMapper filmRowMapper; // Добавлен FilmRowMapper
+
+    // Удалена дублирующая зависимость jdbcTemplate (уже есть jdbc)
 
     @Override
     public Director addDirector(Director director) {
@@ -38,13 +43,50 @@ public class FilmDirectorDAO implements DirectorDAO {
         return director;
     }
 
+    // ВАЖНО: Эти методы должны быть добавлены в интерфейс DirectorDAO
+    @Override
+    public List<Film> getFilmsByDirectorSortedByYear(Long directorId) {
+        log.info("Получение фильмов режиссера {} отсортированных по году через DAO", directorId);
+
+        String query = "SELECT f.* FROM films f " +
+                "JOIN film_directors fd ON f.id = fd.film_id " +
+                "WHERE fd.director_id = ? " +
+                "ORDER BY f.release_date ASC";
+
+        try {
+            return jdbc.query(query, filmRowMapper, directorId);
+        } catch (DataAccessException e) {
+            log.error("Ошибка при получении фильмов режиссера {}: {}", directorId, e.getMessage());
+            throw new DataBaseException("Не удалось получить фильмы режиссера");
+        }
+    }
+
+    @Override
+    public List<Film> getFilmsByDirectorSortedByLikes(Long directorId) {
+        log.info("Получение фильмов режиссера {} отсортированных по лайкам через DAO", directorId);
+
+        String query = "SELECT f.* " +
+                "FROM films f " +
+                "JOIN film_directors fd ON f.id = fd.film_id " +
+                "LEFT JOIN film_likes fl ON f.id = fl.film_id " +
+                "WHERE fd.director_id = ? " +
+                "GROUP BY f.id " +
+                "ORDER BY COUNT(fl.user_id) DESC";
+
+        try {
+            return jdbc.query(query, filmRowMapper, directorId);
+        } catch (DataAccessException e) {
+            log.error("Ошибка при получении фильмов режиссера {}: {}", directorId, e.getMessage());
+            throw new DataBaseException("Не удалось получить фильмы режиссера");
+        }
+    }
+
     @Override
     public List<Director> getAllDirectors() {
         String query = "SELECT id, name FROM directors";
 
         try {
             return jdbc.query(query, mapper);
-
         } catch (DataAccessException e) {
             throw new DataBaseException("Не удалось получить список всех режиссеров.");
         }

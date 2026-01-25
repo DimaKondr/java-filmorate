@@ -29,4 +29,9 @@ public interface FilmStorage {
 
     List<Film> searchFilms(String query, List<String> criteria);
 
+    List<Film> getMostPopularFilms(int count);
+
+
+    //Вывод общих с другом фильмов с сортировкой по их популярности.
+    List<Film> getCommonFilms(Long userId, Long friendId);
 }

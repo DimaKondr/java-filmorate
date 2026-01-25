@@ -100,7 +100,7 @@ public class FilmLikeDAO implements LikeDAO {
     }
 
     @Override
-    public List<Long> getIdOfMostPopularFilms(Long mostPopularFilmCount) {
+    public List<Long> getIdOfMostPopularFilms(Long count) {
         String query = """
             SELECT f.id
             FROM films f
@@ -111,25 +111,24 @@ public class FilmLikeDAO implements LikeDAO {
             """;
 
         try {
-            log.info("Начат процесс получения ID у {} самых популярных фильмов.", mostPopularFilmCount);
-            List<Long> idOfMostPopularFilms = jdbc.queryForList(query, Long.class, mostPopularFilmCount);
+            log.info("Начат процесс получения ID у {} самых популярных фильмов.", count);
+            List<Long> idOfMostPopularFilms = jdbc.queryForList(query, Long.class, count);
 
             if (idOfMostPopularFilms.isEmpty()) {
-                log.info("Набор ID у {} самых популярных фильмов пуст.", mostPopularFilmCount);
-            } else if (idOfMostPopularFilms.size() < mostPopularFilmCount) {
+                log.info("Набор ID у {} самых популярных фильмов пуст.", count);
+            } else if (idOfMostPopularFilms.size() < count) {
                 log.debug("Запрошено {} самых популярных фильмов. В базе найдено {} фильмов. " +
-                                "Предоставлен набор ID у {} самых популярных фильмов.", mostPopularFilmCount,
+                                "Предоставлен набор ID у {} самых популярных фильмов.", count,
                         idOfMostPopularFilms.size(), idOfMostPopularFilms.size());
             } else {
-                log.debug("Набор ID у {} самых популярных фильмов успешно предоставлен.", mostPopularFilmCount);
+                log.debug("Набор ID у {} самых популярных фильмов успешно предоставлен.", count);
             }
             return idOfMostPopularFilms;
         } catch (DataAccessException e) {
             log.error("Неудачная попытка получения ID у {} самых популярных фильмов. --> {}",
-                    mostPopularFilmCount, e.getMessage());
-            throw new DataBaseException("Не удалось получить ID у " + mostPopularFilmCount +
+                    count, e.getMessage());
+            throw new DataBaseException("Не удалось получить ID у " + count +
                     " самых популярных фильмов.");
         }
     }
-
 }

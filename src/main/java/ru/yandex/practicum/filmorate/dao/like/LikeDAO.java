@@ -20,6 +20,5 @@ public interface LikeDAO {
     Set<Long> getLikesOfFilm(Film film);
 
     // Получаем определенное количество ID самых популярных фильмов.
-    List<Long> getIdOfMostPopularFilms(Long mostPopularFilmCount);
-
+    List<Long> getIdOfMostPopularFilms(Long count);
 }
