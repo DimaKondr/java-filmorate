@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.model.UserFeed;
 import ru.yandex.practicum.filmorate.service.UserService;
@@ -98,6 +99,14 @@ public class UserController {
                                            @Min(value = 1, message = "id должен быть положительным целым числом")
                                            @Valid Long anotherUserId) {
         return userService.getMutualFriendsList(userId, anotherUserId);
+    }
+
+
+    @GetMapping("/{id}/recommendations")
+    public List<Film> getRecommendations(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "10") int count) {
+        return userService.getRecommendations(id, count);
     }
 
     @GetMapping("/{id}/feed")

@@ -16,7 +16,9 @@ import ru.yandex.practicum.filmorate.model.User;
 
 import java.sql.Date;
 import java.sql.PreparedStatement;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Repository("userDbStorage")
 @RequiredArgsConstructor
@@ -214,4 +216,9 @@ public class UserDbStorage implements UserStorage {
         }
     }
 
+    public Set<Long> getUserLikes(Long userId) {
+        String query = "SELECT film_id FROM film_likes WHERE user_id = ?";
+        List<Long> filmIds = jdbc.queryForList(query, Long.class, userId);
+        return new HashSet<>(filmIds);
+    }
 }
