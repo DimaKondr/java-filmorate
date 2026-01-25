@@ -419,105 +419,69 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> searchFilms(String query, List<String> criteria) {
-        log.info("=== НАЧАЛО ПОИСКА В БД ===");
         log.info("Поиск фильмов по запросу: '{}' с критериями: {}", query, criteria);
 
         if (query == null || query.trim().isEmpty()) {
-            log.warn("Запрос поиска пустой");
             return new ArrayList<>();
         }
 
-        String searchQuery = query.trim();
+        String searchQuery = "%" + query.toLowerCase() + "%";
 
-        try {
-            StringBuilder sqlBuilder = new StringBuilder(
-                    "SELECT DISTINCT f.* FROM films f " +
-                            "LEFT JOIN film_directors fd ON f.id = fd.film_id " +
-                            "LEFT JOIN directors d ON fd.director_id = d.id " +
-                            "LEFT JOIN film_likes fl ON f.id = fl.film_id "
-            );
+        StringBuilder sql = new StringBuilder(
+                "SELECT f.id, f.name, f.description, f.release_date, f.duration " +
+                        "FROM films f " +
+                        "LEFT JOIN film_directors fd ON f.id = fd.film_id " +
+                        "LEFT JOIN directors d ON fd.director_id = d.id " +
+                        "LEFT JOIN film_likes fl ON f.id = fl.film_id "
+        );
 
-            List<String> conditions = new ArrayList<>();
-            List<Object> params = new ArrayList<>();
+        List<String> conditions = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
 
-            if (criteria.contains("title")) {
-                conditions.add("LOWER(f.name) LIKE ?");
-                params.add("%" + searchQuery.toLowerCase() + "%");
-            }
-
-            if (criteria.contains("director")) {
-                conditions.add("LOWER(d.name) LIKE ?");
-                params.add("%" + searchQuery.toLowerCase() + "%");
-            }
-
-            if (conditions.isEmpty()) {
-                log.warn("Нет критериев поиска, используем оба по умолчанию");
-                conditions.add("LOWER(f.name) LIKE ?");
-                conditions.add("LOWER(d.name) LIKE ?");
-                params.add("%" + searchQuery.toLowerCase() + "%");
-                params.add("%" + searchQuery.toLowerCase() + "%");
-            }
-
-            if (!conditions.isEmpty()) {
-                sqlBuilder.append("WHERE ");
-                if (conditions.size() == 2) {
-                    sqlBuilder.append("(").append(conditions.get(0)).append(" OR ").append(conditions.get(1)).append(")");
-                } else {
-                    sqlBuilder.append(conditions.get(0));
-                }
-            }
-
-            // Сортировка по популярности (количеству лайков) - строго по ТЗ
-            sqlBuilder.append(" GROUP BY f.id ");
-            sqlBuilder.append(" ORDER BY COUNT(fl.user_id) DESC, f.id");
-
-            String sql = sqlBuilder.toString();
-            log.debug("SQL запрос: {}", sql);
-            log.debug("Параметры: {}", params);
-
-            List<Film> films = jdbc.query(sql, mapper, params.toArray());
-            log.info("Найдено {} фильмов по запросу '{}'", films.size(), query);
-
-            // Заполняем дополнительные данные для каждого фильма
-            for (Film film : films) {
-                // Жанры
-                List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
-                if (!filmGenres.isEmpty()) {
-                    for (FilmGenre genre : filmGenres) {
-                        film.getGenres().add(genre);
-                    }
-                }
-
-                // Рейтинг MPA
-                FilmAgeRating filmAgeRating = ratingDAO.getRatingOfFilm(film);
-                if (filmAgeRating != null) {
-                    film.getMpa().setId(filmAgeRating.getId());
-                    film.getMpa().setName(filmAgeRating.getName());
-                }
-
-                // Лайки
-                Set<Long> filmLikes = likeDAO.getLikesOfFilm(film);
-                if (!filmLikes.isEmpty()) {
-                    for (Long like : filmLikes) {
-                        film.getFilmLikedUsersId().add(like);
-                    }
-                }
-
-                // Режиссеры
-                Set<Director> directors = loadDirector(film.getId());
-                if (!directors.isEmpty()) {
-                    film.getDirectors().addAll(directors);
-                }
-            }
-
-            log.info("=== ПОИСК В БД ЗАВЕРШЕН ===");
-            return films;
-
-        } catch (DataAccessException e) {
-            log.error("=== ОШИБКА БД ПРИ ПОИСКЕ ===");
-            log.error("Ошибка при поиске фильмов по запросу '{}': {}", query, e.getMessage(), e);
-            throw new DataBaseException("Не удалось выполнить поиск фильмов.");
+        if (criteria.contains("title")) {
+            conditions.add("LOWER(f.name) LIKE ?");
+            params.add(searchQuery);
         }
+
+        if (criteria.contains("director")) {
+            conditions.add("(d.name IS NOT NULL AND LOWER(d.name) LIKE ?)");
+            params.add(searchQuery);
+        }
+
+        if (!conditions.isEmpty()) {
+            sql.append("WHERE ")
+                    .append(String.join(" OR ", conditions))
+                    .append(" ");
+        }
+
+        sql.append(
+                "GROUP BY f.id, f.name, f.description, f.release_date, f.duration " +
+                        "ORDER BY COUNT(fl.user_id) DESC"
+        );
+
+        List<Film> films;
+        try {
+            films = jdbc.query(sql.toString(), mapper, params.toArray());
+        } catch (DataAccessException e) {
+            log.error("Ошибка при поиске фильмов", e);
+            return new ArrayList<>();
+        }
+
+        for (Film film : films) {
+            film.getGenres().addAll(genreDAO.getGenresOfFilm(film));
+
+            FilmAgeRating filmAgeRating = ratingDAO.getRatingOfFilm(film);
+            if (filmAgeRating != null) {
+                film.getMpa().setId(filmAgeRating.getId());
+                film.getMpa().setName(filmAgeRating.getName());
+            }
+
+            film.getFilmLikedUsersId().addAll(likeDAO.getLikesOfFilm(film));
+            film.getDirectors().addAll(loadDirector(film.getId()));
+        }
+
+        log.info("Найдено {} фильмов по запросу '{}'", films.size(), query);
+        return films;
     }
 
     private void addDirectors(Film film) {
