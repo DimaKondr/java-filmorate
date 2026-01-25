@@ -92,7 +92,7 @@ public class FilmController {
         return filmService.getMostPopularFilms(count, genreId, year);
     }
 
-    @GetMapping("director/{directorId}")
+    @GetMapping("/director/{directorId}")
     public List<Film> getFilmsByDirector(@PathVariable Long directorId,
                                          @RequestParam(name = "sortBy", defaultValue = "year") String sortBy) {
         return filmService.getFilmsByDirector(directorId, SortType.valueOf(sortBy.toUpperCase()));

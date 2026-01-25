@@ -22,6 +22,7 @@ public interface UserStorage {
     // Получаем пользователя по ID.
     User getUserById(Long userId);
 
+    // Получаем лайки пользователя.
     Set<Long> getUserLikes(Long userId);
 
 }

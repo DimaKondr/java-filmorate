@@ -4,13 +4,28 @@ import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
+import org.springframework.context.annotation.Import;
+import ru.yandex.practicum.filmorate.dao.director.DirectorRowMapper;
+import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAOImpl;
+import ru.yandex.practicum.filmorate.dao.feed.UserFeedRowMapper;
+import ru.yandex.practicum.filmorate.dao.friendship.FriendshipRowMapper;
+import ru.yandex.practicum.filmorate.dao.friendship.UserFriendshipDAO;
 
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
+import ru.yandex.practicum.filmorate.dao.genre.FilmGenreDAO;
+import ru.yandex.practicum.filmorate.dao.genre.GenreRowMapper;
+import ru.yandex.practicum.filmorate.dao.like.FilmLikeDAO;
+import ru.yandex.practicum.filmorate.dao.rating.FilmAgeRatingDAO;
+import ru.yandex.practicum.filmorate.dao.rating.RatingRowMapper;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.model.UserFeed;
+import ru.yandex.practicum.filmorate.storage.film.FilmDbStorage;
+import ru.yandex.practicum.filmorate.storage.film.FilmRowMapper;
+import ru.yandex.practicum.filmorate.storage.user.UserDbStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserRowMapper;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
@@ -19,9 +34,27 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-@Transactional
+@JdbcTest
+@AutoConfigureTestDatabase
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
+@Import({
+        FilmDbStorage.class,
+        UserDbStorage.class,
+        FilmLikeDAO.class,
+        FilmGenreDAO.class,
+        FilmAgeRatingDAO.class,
+        UserFriendshipDAO.class,
+        UserFeedDAOImpl.class,
+        UserFeedRowMapper.class,
+        UserService.class,
+        FilmRowMapper.class,
+        UserRowMapper.class,
+        GenreRowMapper.class,
+        RatingRowMapper.class,
+        FriendshipRowMapper.class,
+        DirectorRowMapper.class,
+        FriendshipRowMapper.class
+})
 class UserServiceTests {
     private final UserService userService;
     private UserStorage userStorage;

@@ -216,10 +216,14 @@ class FilmServiceTests {
             users.add(user);
         }
 
-        List<Film> popularFilms = filmService.getMostPopularFilms(10L, null, null);
+        List<Film> allFilms = filmService.getFilmStorage().getAllFilms();
+        List<Film> noLikeFilms = filmService.getMostPopularFilms(100L, null, null);
 
         // Проверяем, что в списке есть 3 фильма (все добавленные, даже без лайков)
-        assertEquals(3, popularFilms.size(), "Количество элементов не совпадает");
+        assertEquals(3, allFilms.size(), "Количество элементов не совпадает");
+
+        // Проверяем, что в списке популярных фильмов нет элементов, так как у всех фильмов списки лайков пустые
+        assertTrue(noLikeFilms.isEmpty(), "Список не пуст");
 
         filmService.addLike(films.get(0).getId(), users.get(0).getId());
         filmService.addLike(films.get(0).getId(), users.get(1).getId());
@@ -228,7 +232,7 @@ class FilmServiceTests {
         filmService.addLike(films.get(2).getId(), users.get(1).getId());
         filmService.addLike(films.get(2).getId(), users.get(2).getId());
 
-        popularFilms = filmService.getMostPopularFilms(10L, null, null);
+        List<Film> popularFilms = filmService.getMostPopularFilms(10L, null, null);
 
         assertEquals(3, popularFilms.size());
         assertEquals(films.get(2).getId(), popularFilms.get(0).getId(), "Фильм с 3 лайками должен быть первым");

@@ -101,21 +101,19 @@ public class UserController {
         return userService.getMutualFriendsList(userId, anotherUserId);
     }
 
-
     @GetMapping("/{id}/recommendations")
-    public List<Film> getRecommendations(
-            @PathVariable Long id,
-            @RequestParam(defaultValue = "10") int count) {
+    public List<Film> getRecommendations(@PathVariable("id")
+                                         Long id,
+                                         @RequestParam(defaultValue = "10")
+                                         int count) {
         return userService.getRecommendations(id, count);
     }
 
     @GetMapping("/{id}/feed")
-    public List<UserFeed> getFeed(
-            @PathVariable("id")
-            @NotNull(message = "id не может быть null")
-            @Min(value = 1, message = "id должен быть положительным целым числом")
-            @Valid Long userId) {
-
+    public List<UserFeed> getFeed(@PathVariable("id")
+                                  @NotNull(message = "id не может быть null")
+                                  @Min(value = 1, message = "id должен быть положительным целым числом")
+                                  @Valid Long userId) {
         return userService.getFeedByUserId(userId);
     }
 }

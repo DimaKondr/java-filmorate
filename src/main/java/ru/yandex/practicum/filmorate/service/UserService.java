@@ -30,7 +30,8 @@ public class UserService {
 
     @Autowired
     public UserService(@Qualifier("userDbStorage") UserStorage userStorage,
-                       FriendshipDAO friendshipDAO, @Qualifier("filmDbStorage") FilmStorage filmStorage,
+                       @Qualifier("filmDbStorage") FilmStorage filmStorage,
+                       FriendshipDAO friendshipDAO,
                        UserFeedDAO userFeedDAO) {
         this.userStorage = userStorage;
         this.friendshipDAO = friendshipDAO;
