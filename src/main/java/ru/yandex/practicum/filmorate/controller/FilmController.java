@@ -115,14 +115,15 @@ public class FilmController {
 
     @GetMapping("/search")
     public List<Film> searchFilms(
-            @RequestParam(name = "query") String query,
+            @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "by", required = false) String by) {
 
         log.info("=== ЗАПРОС ПОИСКА ФИЛЬМОВ ===");
         log.info("Параметры: query='{}', by='{}'", query, by);
 
+        // Если query не указан, возвращаем пустой список (как в ТЗ)
         if (query == null || query.trim().isEmpty()) {
-            log.warn("Запрос поиска пустой, возвращаем пустой список");
+            log.info("Запрос поиска пустой, возвращаем пустой список");
             return List.of();
         }
 
