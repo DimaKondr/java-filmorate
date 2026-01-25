@@ -448,5 +448,4 @@ public class FilmDbStorage implements FilmStorage {
     public List<Film> getCommonFilms(Long userId, Long friendId) {
         return List.of();
     }
-
 }

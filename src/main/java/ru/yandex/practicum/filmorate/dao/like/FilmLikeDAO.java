@@ -160,7 +160,7 @@ public class FilmLikeDAO implements LikeDAO {
                         mostPopularFilms.size());
             }
             log.debug("Список {} самых популярных фильмов за {} год в жанре с ID: {} предоставлен.",
-                        count, year, genreId);
+                    count, year, genreId);
             return mostPopularFilms;
         } catch (DataAccessException e) {
             log.error("Неудачная попытка получения списка {} самых популярных фильмов за {} год в жанре с ID: {}." +
