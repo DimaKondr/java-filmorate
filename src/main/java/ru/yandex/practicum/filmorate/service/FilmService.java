@@ -273,4 +273,8 @@ public class FilmService {
         log.debug("Результат парсинга критериев: {}", criteria);
         return criteria;
     }
+
+    public List<Film> getCommonFilms(Long userId, Long friendId) {
+        return filmStorage.getCommonFilms(userId, friendId);
+    }
 }

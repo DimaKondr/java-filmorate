@@ -171,7 +171,12 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .collect(Collectors.toList());
     }
 
-    // Генерируем ID нового фильма
+    @Override
+    public List<Film> getCommonFilms(Long userId, Long friendId) {
+        return List.of();
+    }
+
+    //Генерируем ID нового фильма
     private long getNextId() {
         long currentMaxId = films.keySet()
                 .stream()
