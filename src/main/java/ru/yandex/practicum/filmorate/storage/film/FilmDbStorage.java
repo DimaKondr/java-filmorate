@@ -24,11 +24,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.time.LocalDate;
 import java.time.Month;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 @Repository("filmDbStorage")
 @RequiredArgsConstructor
@@ -87,8 +83,6 @@ public class FilmDbStorage implements FilmStorage {
                 ratingDAO.addRatingToFilm(film);
             }
             addDirectors(film);
-
-            log.info("Успешно добавлен новый фильм с ID: {}", film.getId());
             return film;
         } else {
             log.error("Не удалось добавить новый фильм, так как ID имеет null-значение.");
@@ -347,59 +341,6 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     @Override
-    public List<Film> getMostPopularFilms(int count) {
-        log.info("Получение {} самых популярных фильмов", count);
-
-        String sql = "SELECT f.* FROM films f " +
-                "LEFT JOIN film_likes fl ON f.id = fl.film_id " +
-                "GROUP BY f.id " +
-                "ORDER BY COUNT(fl.user_id) DESC, f.id " +
-                "LIMIT ?";
-
-        try {
-            List<Film> films = jdbc.query(sql, mapper, count);
-
-            for (Film film : films) {
-                // Жанры
-                List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
-                if (!filmGenres.isEmpty()) {
-                    for (FilmGenre genre : filmGenres) {
-                        film.getGenres().add(genre);
-                    }
-                }
-
-                // Рейтинг MPA
-                FilmAgeRating filmAgeRating = ratingDAO.getRatingOfFilm(film);
-                if (filmAgeRating != null) {
-                    film.getMpa().setId(filmAgeRating.getId());
-                    film.getMpa().setName(filmAgeRating.getName());
-                }
-
-                // Лайки
-                Set<Long> filmLikes = likeDAO.getLikesOfFilm(film);
-                if (!filmLikes.isEmpty()) {
-                    for (Long like : filmLikes) {
-                        film.getFilmLikedUsersId().add(like);
-                    }
-                }
-
-                // Режиссеры
-                Set<Director> directors = loadDirector(film.getId());
-                if (!directors.isEmpty()) {
-                    film.getDirectors().addAll(directors);
-                }
-            }
-
-            log.info("Успешно получено {} популярных фильмов", films.size());
-            return films;
-
-        } catch (DataAccessException e) {
-            log.error("Ошибка при получении популярных фильмов: {}", e.getMessage(), e);
-            throw new DataBaseException("Не удалось получить популярные фильмы");
-        }
-    }
-
-    @Override
     public List<Film> getCommonFilms(Long userId, Long friendId) {
         String query = "SELECT f.id, f.name, f.description, f.release_date, f.duration " +
                 "FROM films AS f " +
@@ -417,6 +358,23 @@ public class FilmDbStorage implements FilmStorage {
         }
 
         return films;
+    }
+
+    private void addDirectors(Film film) {
+        String query = "INSERT INTO film_directors(film_id, director_id) VALUES (?, ?)";
+
+        if (film.getDirectors() == null || film.getDirectors().isEmpty()) {
+            return;
+        }
+
+        List<Object[]> batchArgs = film.getDirectors().stream()
+                .map(Director::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .map(directorId -> new Object[]{film.getId(), directorId})
+                .toList();
+
+        jdbc.batchUpdate(query, batchArgs);
     }
 
     @Override
@@ -486,21 +444,9 @@ public class FilmDbStorage implements FilmStorage {
         return films;
     }
 
-    private void addDirectors(Film film) {
-        String query = "INSERT INTO film_directors(film_id, director_id) VALUES (?, ?)";
-
-        if (film.getDirectors() == null || film.getDirectors().isEmpty()) {
-            return;
-        }
-
-        List<Object[]> batchArgs = film.getDirectors().stream()
-                .map(Director::getId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .map(directorId -> new Object[]{film.getId(), directorId})
-                .toList();
-
-        jdbc.batchUpdate(query, batchArgs);
+    @Override
+    public List<Film> getMostPopularFilms(int count) {
+        return List.of();
     }
 
     private Set<Director> loadDirector(Long filmId) {
