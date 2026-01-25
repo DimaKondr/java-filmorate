@@ -60,11 +60,9 @@ public class UserController {
     @PutMapping("/{id}/friends/{friendId}")
     public User addFriend(@PathVariable("id")
                           @NotNull(message = "id не может быть null")
-                          @Min(value = 1, message = "id должен быть положительным целым числом")
                           @Valid Long userId,
                           @PathVariable("friendId")
                           @NotNull(message = "id не может быть null")
-                          @Min(value = 1, message = "id должен быть положительным целым числом")
                           @Valid Long addedFriendsId) {
         return userService.addFriend(userId, addedFriendsId);
     }

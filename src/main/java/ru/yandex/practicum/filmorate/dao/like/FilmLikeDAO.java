@@ -108,7 +108,7 @@ public class FilmLikeDAO implements LikeDAO {
     public List<Film> getMostPopularFilms(Long count, Long genreId, Long year) {
         StringBuilder sb = new StringBuilder("SELECT f.id, f.name, f.description, f.release_date, f.duration " +
                 "FROM films AS f " +
-                "INNER JOIN film_likes AS fl ON f.id = fl.film_id ");
+                "LEFT JOIN film_likes AS fl ON f.id = fl.film_id ");
 
         List<Long> params = new ArrayList<>();
         List<String> whereConditions = new ArrayList<>();
