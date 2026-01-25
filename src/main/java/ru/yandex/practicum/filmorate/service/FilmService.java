@@ -24,16 +24,19 @@ public class FilmService {
     private final UserService userService;
     private final LikeDAO likeDAO;
     private final UserFeedDAO userFeedDAO;
+    private final DirectorService directorService;
 
     @Autowired
     public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage,
                        UserService userService,
                        LikeDAO likeDAO,
-                       UserFeedDAO userFeedDAO) {
+                       UserFeedDAO userFeedDAO,
+                       DirectorService directorService) {
         this.filmStorage = filmStorage;
         this.userService = userService;
         this.likeDAO = likeDAO;
         this.userFeedDAO = userFeedDAO;
+        this.directorService = directorService;
     }
 
     public Film addLike(Long likedFilmId, Long userId) {
@@ -68,10 +71,11 @@ public class FilmService {
     }
 
     public List<Film> getFilmsByDirector(Long directorId, SortType sortType) {
-       return switch (sortType) {
-           case LIKES -> filmStorage.getFilmsByDirectorSortedByLikes(directorId);
-           case YEAR -> filmStorage.getFilmsByDirectorSortedByYear(directorId);
-       };
+        directorService.getDirectorById(directorId);
+        return switch (sortType) {
+            case LIKES -> filmStorage.getFilmsByDirectorSortedByLikes(directorId);
+            case YEAR -> filmStorage.getFilmsByDirectorSortedByYear(directorId);
+        };
     }
 
     public List<Film> getCommonFilms(Long userId, Long friendId) {

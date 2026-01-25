@@ -8,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
 import ru.yandex.practicum.filmorate.dao.director.DirectorRowMapper;
+import ru.yandex.practicum.filmorate.dao.director.FilmDirectorDAO;
 import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAOImpl;
 import ru.yandex.practicum.filmorate.dao.feed.UserFeedRowMapper;
 import ru.yandex.practicum.filmorate.dao.friendship.FriendshipRowMapper;
@@ -57,7 +58,9 @@ import static org.junit.jupiter.api.Assertions.*;
         DirectorRowMapper.class,
         UserFeedDAOImpl.class,
         UserRowMapper.class,
-        UserFeedRowMapper.class
+        UserFeedRowMapper.class,
+        DirectorService.class,
+        FilmDirectorDAO.class
 })
 class FilmServiceTests {
     private final FilmService filmService;

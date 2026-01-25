@@ -63,8 +63,11 @@ public class FilmDirectorDAO implements DirectorDAO {
 
     @Override
     public boolean removeDirector(Long id) {
-        String query = "DELETE FROM directors WHERE id = ?";
-        return delete(query, id);
+        String query1 = "DELETE FROM film_directors WHERE director_id = ?";
+        jdbc.update(query1, id)
+        ;
+        String query2 = "DELETE FROM directors WHERE id = ?";
+        return delete(query2, id);
     }
 
     private Long insert(String query, Object... params) {
