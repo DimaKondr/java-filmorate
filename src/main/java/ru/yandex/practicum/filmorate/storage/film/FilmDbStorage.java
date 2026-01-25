@@ -81,7 +81,7 @@ public class FilmDbStorage implements FilmStorage {
             if (film.getMpa().getId() != null) {
                 ratingDAO.addRatingToFilm(film);
             }
-            addDirectors(film);
+            addDirectorsToFilm(film);
 
             log.info("Успешно добавлен новый фильм с ID: {}", film.getId());
             return film;
@@ -184,7 +184,7 @@ public class FilmDbStorage implements FilmStorage {
         // Обновляем режиссеров
         if (!oldFilm.getDirectors().equals(updatedFilm.getDirectors())) {
             removeDirectorFromFilm(oldFilm.getId());
-            addDirectors(updatedFilm);
+            addDirectorsToFilm(updatedFilm);
             oldFilm.getDirectors().clear();
             oldFilm.getDirectors().addAll(loadDirector(oldFilm.getId()));
         }
@@ -388,10 +388,7 @@ public class FilmDbStorage implements FilmStorage {
         }
     }
 
-    private void fillFilmAdditionalData(Film film) {
-        if (film == null) {
-            return;
-        }
+    @Override
     public List<Film> getCommonFilms(Long userId, Long friendId) {
         String query = "SELECT f.id, f.name, f.description, f.release_date, f.duration " +
                 "FROM films AS f " +
@@ -404,47 +401,44 @@ public class FilmDbStorage implements FilmStorage {
         List<Film> films = jdbc.query(query, mapper, userId, friendId);
 
         for (Film film : films) {
-            List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
-            film.getGenres().addAll(filmGenres);
+            fillFilmAdditionalData(film);
         }
 
         return films;
     }
 
-    private void addDirectors(Film film) {
-        String query = "INSERT INTO film_directors(film_id, director_id) VALUES (?, ?)";
+    private void fillFilmAdditionalData(Film film) {
+        if (film == null) {
+            return;
+        }
 
-        try {
-            // Жанры - коллекция уже инициализирована в конструкторе Film
-            List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
-            if (filmGenres != null && !filmGenres.isEmpty()) {
-                film.getGenres().addAll(filmGenres);
-            }
+        // Жанры
+        List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
+        if (filmGenres != null && !filmGenres.isEmpty()) {
+            film.getGenres().addAll(filmGenres);
+        }
 
-            // Рейтинг MPA - объект уже инициализирован в конструкторе Film
-            FilmAgeRating filmAgeRating = ratingDAO.getRatingOfFilm(film);
-            if (filmAgeRating != null) {
-                film.getMpa().setId(filmAgeRating.getId());
-                film.getMpa().setName(filmAgeRating.getName());
-            }
+        // Рейтинг MPA
+        FilmAgeRating filmAgeRating = ratingDAO.getRatingOfFilm(film);
+        if (filmAgeRating != null) {
+            film.getMpa().setId(filmAgeRating.getId());
+            film.getMpa().setName(filmAgeRating.getName());
+        }
 
-            // Лайки - коллекция уже инициализирована в конструкторе Film
-            Set<Long> filmLikes = likeDAO.getLikesOfFilm(film);
-            if (filmLikes != null && !filmLikes.isEmpty()) {
-                film.getFilmLikedUsersId().addAll(filmLikes);
-            }
+        // Лайки
+        Set<Long> filmLikes = likeDAO.getLikesOfFilm(film);
+        if (filmLikes != null && !filmLikes.isEmpty()) {
+            film.getFilmLikedUsersId().addAll(filmLikes);
+        }
 
-            // Режиссеры - коллекция уже инициализирована в конструкторе Film
-            Set<Director> directors = loadDirector(film.getId());
-            if (directors != null && !directors.isEmpty()) {
-                film.getDirectors().addAll(directors);
-            }
-        } catch (Exception e) {
-            log.warn("Ошибка при заполнении дополнительных данных фильма {}: {}", film.getId(), e.getMessage());
+        // Режиссеры
+        Set<Director> directors = loadDirector(film.getId());
+        if (directors != null && !directors.isEmpty()) {
+            film.getDirectors().addAll(directors);
         }
     }
 
-    private void addDirectors(Film film) {
+    private void addDirectorsToFilm(Film film) {
         if (film == null || film.getId() == null || film.getDirectors().isEmpty()) {
             return;
         }
