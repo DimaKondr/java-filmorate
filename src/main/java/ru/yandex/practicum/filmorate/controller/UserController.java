@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
 
@@ -31,17 +32,17 @@ public class UserController {
 
     @GetMapping("/{id}")
     public User getUser(@PathVariable("id")
-                            @NotNull(message = "id не может быть null")
-                            @Min(value = 1, message = "id должен быть положительным целым числом")
-                            @Valid Long userId) {
+                        @NotNull(message = "id не может быть null")
+                        @Min(value = 1, message = "id должен быть положительным целым числом")
+                        @Valid Long userId) {
         return userService.getUserStorage().getUserById(userId);
     }
 
     @DeleteMapping("/{id}")
     public User removeUser(@PathVariable("id")
-                               @NotNull(message = "id не может быть null")
-                               @Min(value = 1, message = "id должен быть положительным целым числом")
-                               @Valid Long removedUserId) {
+                           @NotNull(message = "id не может быть null")
+                           @Min(value = 1, message = "id должен быть положительным целым числом")
+                           @Valid Long removedUserId) {
         return userService.getUserStorage().removeUser(removedUserId);
     }
 
@@ -57,46 +58,52 @@ public class UserController {
 
     @PutMapping("/{id}/friends/{friendId}")
     public User addFriend(@PathVariable("id")
-                              @NotNull(message = "id не может быть null")
-                              @Min(value = 1, message = "id должен быть положительным целым числом")
-                              @Valid Long userId,
+                          @NotNull(message = "id не может быть null")
+                          @Min(value = 1, message = "id должен быть положительным целым числом")
+                          @Valid Long userId,
                           @PathVariable("friendId")
-                              @NotNull(message = "id не может быть null")
-                              @Min(value = 1, message = "id должен быть положительным целым числом")
-                              @Valid Long addedFriendsId) {
+                          @NotNull(message = "id не может быть null")
+                          @Min(value = 1, message = "id должен быть положительным целым числом")
+                          @Valid Long addedFriendsId) {
         return userService.addFriend(userId, addedFriendsId);
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
     public User removeFriend(@PathVariable("id")
-                                 @NotNull(message = "id не может быть null")
-                                 @Min(value = 1, message = "id должен быть положительным целым числом")
-                                 @Valid Long userId,
+                             @NotNull(message = "id не может быть null")
+                             @Min(value = 1, message = "id должен быть положительным целым числом")
+                             @Valid Long userId,
                              @PathVariable("friendId")
-                                 @NotNull(message = "id не может быть null")
-                                 @Min(value = 1, message = "id должен быть положительным целым числом")
-                                 @Valid Long removedFriendsId) {
+                             @NotNull(message = "id не может быть null")
+                             @Min(value = 1, message = "id должен быть положительным целым числом")
+                             @Valid Long removedFriendsId) {
         return userService.removeFriend(userId, removedFriendsId);
     }
 
     @GetMapping("/{id}/friends")
     public List<User> getFriendsListOfUser(@PathVariable("id")
-                                               @NotNull(message = "id не может быть null")
-                                               @Min(value = 1, message = "id должен быть положительным целым числом")
-                                               @Valid Long userId) {
+                                           @NotNull(message = "id не может быть null")
+                                           @Min(value = 1, message = "id должен быть положительным целым числом")
+                                           @Valid Long userId) {
         return userService.getFriendsListOfUser(userId);
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
     public List<User> getMutualFriendsList(@PathVariable("id")
-                                               @NotNull(message = "id не может быть null")
-                                               @Min(value = 1, message = "id должен быть положительным целым числом")
-                                               @Valid Long userId,
+                                           @NotNull(message = "id не может быть null")
+                                           @Min(value = 1, message = "id должен быть положительным целым числом")
+                                           @Valid Long userId,
                                            @PathVariable("otherId")
-                                               @NotNull(message = "id не может быть null")
-                                               @Min(value = 1, message = "id должен быть положительным целым числом")
-                                               @Valid Long anotherUserId) {
+                                           @NotNull(message = "id не может быть null")
+                                           @Min(value = 1, message = "id должен быть положительным целым числом")
+                                           @Valid Long anotherUserId) {
         return userService.getMutualFriendsList(userId, anotherUserId);
     }
 
+    @GetMapping("/{id}/recommendations")
+    public List<Film> getRecommendations(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "10") int count) {
+        return userService.getRecommendations(id, count);
+    }
 }

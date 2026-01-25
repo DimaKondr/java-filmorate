@@ -4,17 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
-import org.springframework.context.annotation.Import;
-import ru.yandex.practicum.filmorate.dao.friendship.FriendshipRowMapper;
-import ru.yandex.practicum.filmorate.dao.friendship.UserFriendshipDAO;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.model.UserFriendship;
-import ru.yandex.practicum.filmorate.storage.user.UserDbStorage;
-import ru.yandex.practicum.filmorate.storage.user.UserRowMapper;
+
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
@@ -25,16 +21,9 @@ import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@JdbcTest
-@AutoConfigureTestDatabase
+@SpringBootTest
+@Transactional
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
-@Import({
-        UserDbStorage.class,
-        UserFriendshipDAO.class,
-        UserService.class,
-        UserRowMapper.class,
-        FriendshipRowMapper.class
-        })
 class UserServiceTests {
     private final UserService userService;
     User user1;
@@ -178,12 +167,11 @@ class UserServiceTests {
         User addedUser1 = userStorage.addUser(user1);
         User addedUser2 = userStorage.addUser(user2);
         userService.addFriend(addedUser1.getId(), addedUser2.getId());
-
-        // Проверяем, что было выброшено необходимое исключение, так как ID друга не найден
+        Long invalidId = 999999L;
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userService.removeFriend(addedUser1.getId(), 4L),
+                () -> userService.removeFriend(addedUser1.getId(), invalidId),
                 "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Попытка получения пользователя. Пользователь с ID: " + 4L + " не найден",
+        assertEquals("Попытка получения пользователя. Пользователь с ID: " + invalidId + " не найден",
                 exception.getMessage(), "Сообщения не совпадают");
     }
 

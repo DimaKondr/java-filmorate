@@ -9,6 +9,7 @@ import ru.yandex.practicum.filmorate.model.User;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Component("inMemoryUserStorage")
 @Slf4j
@@ -125,4 +126,8 @@ public class InMemoryUserStorage implements UserStorage {
         return ++currentMaxId;
     }
 
+    @Override // затычка
+    public Set<Long> getUserLikes(Long userId) {
+        return null;
+    }
 }
