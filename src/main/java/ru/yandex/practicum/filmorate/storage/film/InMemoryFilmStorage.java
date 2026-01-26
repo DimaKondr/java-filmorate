@@ -11,8 +11,6 @@ import java.time.Month;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
 
 @Component("inMemoryFilmStorage")
 @Slf4j
@@ -86,7 +84,7 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public List<Film> getAllFilms() {
         log.info("Начат процесс предоставления списка всех фильмов");
-        return new ArrayList<>(films.values());
+        return films.values().stream().toList();
     }
 
     @Override
@@ -109,7 +107,7 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .sorted((f1, f2) ->
                         Integer.compare(f2.getFilmLikedUsersId().size(),
                                 f1.getFilmLikedUsersId().size()))
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -118,57 +116,9 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .filter(film -> film.getDirectors() != null &&
                         film.getDirectors().stream()
                                 .anyMatch(d -> d.getId().equals(id)))
-                .sorted((f1, f2) -> f2.getReleaseDate().compareTo(f1.getReleaseDate()))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<Film> searchFilms(String query, List<String> criteria) {
-        log.info("Поиск фильмов in-memory по запросу: '{}' с критериями: {}", query, criteria);
-
-        if (query == null || query.trim().isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        String searchQuery = query.toLowerCase().trim();
-
-        return films.values().stream()
-                .filter(film -> {
-                    boolean matches = false;
-
-                    // Поиск по названию
-                    if (criteria.contains("title")) {
-                        matches = film.getName().toLowerCase().contains(searchQuery);
-                    }
-
-                    // Поиск по режиссеру
-                    if (!matches && criteria.contains("director")) {
-                        matches = film.getDirectors().stream()
-                                .anyMatch(director -> director != null &&
-                                        director.getName() != null &&
-                                        director.getName().toLowerCase().contains(searchQuery));
-                    }
-
-                    return matches;
-                })
-                .sorted((f1, f2) -> {
-                    // Сортировка по количеству лайков (убывающий порядок)
-                    int likes1 = f1.getFilmLikedUsersId().size();
-                    int likes2 = f2.getFilmLikedUsersId().size();
-                    return Integer.compare(likes2, likes1);
-                })
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<Film> getMostPopularFilms(int count) {
-        log.info("Получение {} самых популярных фильмов (in-memory)", count);
-
-        return films.values().stream()
                 .sorted((f1, f2) ->
-                        Integer.compare(f2.getFilmLikedUsersId().size(), f1.getFilmLikedUsersId().size()))
-                .limit(count)
-                .collect(Collectors.toList());
+                        f2.getReleaseDate().compareTo(f1.getReleaseDate()))
+                .toList();
     }
 
     @Override
@@ -185,4 +135,5 @@ public class InMemoryFilmStorage implements FilmStorage {
                 .orElse(0);
         return ++currentMaxId;
     }
+
 }

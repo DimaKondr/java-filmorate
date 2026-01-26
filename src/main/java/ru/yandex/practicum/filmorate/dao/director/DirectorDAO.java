@@ -1,33 +1,27 @@
 package ru.yandex.practicum.filmorate.dao.director;
 
 import ru.yandex.practicum.filmorate.model.Director;
-import ru.yandex.practicum.filmorate.model.Film;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface DirectorDAO {
 
-    // Список всех режиссёров
+    //Список всех режиссёров
     List<Director> getAllDirectors();
 
-    // Получение режиссёра по id
+    //Получение режиссёра по id
     Optional<Director> getDirectorById(Long id);
 
-    // Создание режиссёра
+    //Создание режиссёра
     Director addDirector(Director director);
 
-    // Изменение режиссёра
+    //Изменение режиссёра
     Director updateDirector(Director director);
 
-    // Удаление режиссёра
+    //Удаление режиссёра
     boolean removeDirector(Long id);
 
-    // Если тесты ожидают эти методы, добавь их:
-
-    List<Film> getFilmsByDirectorSortedByYear(Long directorId);
-
-    List<Film> getFilmsByDirectorSortedByLikes(Long directorId);
-
+    //Получение списка режиссеров определенного фильма
     List<Director> getDirectorsOfFilm(Long filmId);
 }
