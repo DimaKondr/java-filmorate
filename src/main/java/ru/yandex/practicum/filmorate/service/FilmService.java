@@ -76,24 +76,56 @@ public class FilmService {
     }
 
     public List<Film> getMostPopularFilms(Long count, Long genreId, Long year) {
-        List<Film> mostPopularFilms = likeDAO.getMostPopularFilms(count, genreId, year);
+        log.info("=== ПОЛУЧЕНИЕ ПОПУЛЯРНЫХ ФИЛЬМОВ ===");
+        log.info("Параметры: count={}, genreId={}, year={}", count, genreId, year);
 
-        for (Film film : mostPopularFilms) {
-            film.getGenres().addAll(genreDAO.getGenresOfFilm(film));
+        // Используем метод из FilmStorage (ваш текущий FilmDbStorage уже имеет его)
+        List<Film> allPopularFilms = filmStorage.getMostPopularFilms(count.intValue());
 
-            FilmAgeRating rating = ratingDAO.getRatingOfFilm(film);
-            if (rating != null) {
-                film.getMpa().setId(rating.getId());
-                film.getMpa().setName(rating.getName());
+        // Если нет фильтрации, возвращаем как есть
+        if (genreId == null && year == null) {
+            log.info("Без фильтрации, возвращаем {} фильмов", allPopularFilms.size());
+            return allPopularFilms;
+        }
+
+        // Фильтруем результаты
+        List<Film> filteredFilms = new ArrayList<>();
+
+        for (Film film : allPopularFilms) {
+            boolean passesFilter = true;
+
+            // Фильтрация по жанру
+            if (genreId != null) {
+                boolean hasGenre = film.getGenres().stream()
+                        .anyMatch(genre -> genreId.equals(genre.getId()));
+                if (!hasGenre) {
+                    passesFilter = false;
+                    log.debug("Фильм ID {} не имеет жанра ID {}, пропускаем", film.getId(), genreId);
+                }
             }
 
-            film.getDirectors().addAll(directorDAO.getDirectorsOfFilm(film.getId()));
+            // Фильтрация по году
+            if (year != null && passesFilter) {
+                if (film.getReleaseDate().getYear() != year) {
+                    passesFilter = false;
+                    log.debug("Фильм ID {} имеет год {}, а нужен {}, пропускаем",
+                            film.getId(), film.getReleaseDate().getYear(), year);
+                }
+            }
+
+            if (passesFilter) {
+                filteredFilms.add(film);
+                log.debug("Фильм ID {} прошел фильтрацию", film.getId());
+            }
         }
-        return mostPopularFilms;
+
+        log.info("=== ПОПУЛЯРНЫЕ ФИЛЬМЫ ПОЛУЧЕНЫ ===");
+        log.info("Возвращаем {} отфильтрованных фильмов", filteredFilms.size());
+        return filteredFilms;
     }
 
     public List<Film> getFilmsByDirector(Long directorId, SortType sortType) {
-        directorService.getDirectorById(directorId);
+        log.info("Получение фильмов режиссера ID: {} с сортировкой: {}", directorId, sortType);
         return switch (sortType) {
             case LIKES -> filmStorage.getFilmsByDirectorSortedByLikes(directorId);
             case YEAR -> filmStorage.getFilmsByDirectorSortedByYear(directorId);
@@ -102,5 +134,38 @@ public class FilmService {
 
     public List<Film> getCommonFilms(Long userId, Long friendId) {
         return filmStorage.getCommonFilms(userId, friendId);
+    }
+
+    public List<Film> searchFilms(String query, String by) {
+        log.info("=== ПОИСК ФИЛЬМОВ В СЕРВИСЕ ===");
+        log.info("Запрос: '{}', критерии: '{}'", query, by);
+
+        if (query == null || query.trim().isEmpty()) {
+            log.warn("Пустой запрос поиска");
+            return List.of();
+        }
+
+        List<String> criteria = new ArrayList<>();
+
+        if (by != null) {
+            String[] parts = by.split(",");
+            for (String part : parts) {
+                String trimmed = part.trim().toLowerCase();
+                if (trimmed.equals("title") || trimmed.equals("director")) {
+                    criteria.add(trimmed);
+                }
+            }
+        }
+
+        if (criteria.isEmpty()) {
+            criteria = List.of("title", "director");
+        }
+
+        log.info("Критерии поиска: {}", criteria);
+
+        List<Film> result = filmStorage.searchFilms(query, criteria);
+        log.info("Найдено {} фильмов", result.size());
+
+        return result;
     }
 }
