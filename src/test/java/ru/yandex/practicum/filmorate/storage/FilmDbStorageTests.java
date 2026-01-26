@@ -13,7 +13,6 @@ import ru.yandex.practicum.filmorate.dao.rating.FilmAgeRatingDAO;
 import ru.yandex.practicum.filmorate.dao.genre.FilmGenreDAO;
 import ru.yandex.practicum.filmorate.dao.genre.GenreRowMapper;
 import ru.yandex.practicum.filmorate.dao.rating.RatingRowMapper;
-import ru.yandex.practicum.filmorate.exception.DataBaseException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
@@ -178,11 +177,8 @@ class FilmDbStorageTests {
 
     @Test
     void getAllFilms() {
-        // Проверяем, что было выброшено необходимое исключение, так как список пуст
-        DataBaseException exception = assertThrows(DataBaseException.class, () -> filmDbStorage.getAllFilms(),
-                "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Список всех фильмов пуст.",
-                exception.getMessage(), "Сообщения не совпадают");
+        // Проверяем, что список пуст.
+        assertTrue(filmDbStorage.getAllFilms().isEmpty(), "Список не пуст!");
 
         Film film3 = new Film(null, "Name of the film3", "Description of the film3",
                 LocalDate.of(2001, Month.DECEMBER, 29), 145L);
