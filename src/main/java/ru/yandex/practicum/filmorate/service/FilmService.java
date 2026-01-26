@@ -135,4 +135,36 @@ public class FilmService {
     public List<Film> getCommonFilms(Long userId, Long friendId) {
         return filmStorage.getCommonFilms(userId, friendId);
     }
+    public List<Film> searchFilms(String query, String by) {
+        log.info("=== ПОИСК ФИЛЬМОВ В СЕРВИСЕ ===");
+        log.info("Запрос: '{}', критерии: '{}'", query, by);
+
+        if (query == null || query.trim().isEmpty()) {
+            log.warn("Пустой запрос поиска");
+            return List.of();
+        }
+
+        List<String> criteria = new ArrayList<>();
+
+        if (by != null) {
+            String[] parts = by.split(",");
+            for (String part : parts) {
+                String trimmed = part.trim().toLowerCase();
+                if (trimmed.equals("title") || trimmed.equals("director")) {
+                    criteria.add(trimmed);
+                }
+            }
+        }
+
+        if (criteria.isEmpty()) {
+            criteria = List.of("title", "director");
+        }
+
+        log.info("Критерии поиска: {}", criteria);
+
+        List<Film> result = filmStorage.searchFilms(query, criteria);
+        log.info("Найдено {} фильмов", result.size());
+
+        return result;
+    }
 }

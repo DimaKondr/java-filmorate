@@ -25,9 +25,9 @@ public interface DirectorDAO {
 
     // Если тесты ожидают эти методы, добавь их:
 
-    // Получение фильмов режиссера, отсортированных по году
     List<Film> getFilmsByDirectorSortedByYear(Long directorId);
 
-    // Получение фильмов режиссера, отсортированных по лайкам
     List<Film> getFilmsByDirectorSortedByLikes(Long directorId);
+
+    List<Director> getDirectorsOfFilm(Long filmId);
 }
