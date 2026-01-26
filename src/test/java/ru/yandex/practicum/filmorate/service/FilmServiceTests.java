@@ -8,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabas
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
 import ru.yandex.practicum.filmorate.dao.director.DirectorRowMapper;
+import ru.yandex.practicum.filmorate.dao.director.FilmDirectorDAO;
 import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAOImpl;
 import ru.yandex.practicum.filmorate.dao.feed.UserFeedRowMapper;
 import ru.yandex.practicum.filmorate.dao.friendship.FriendshipRowMapper;
@@ -44,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.*;
         FilmLikeDAO.class,
         FilmGenreDAO.class,
         FilmAgeRatingDAO.class,
+        FilmDirectorDAO.class,
         UserFriendshipDAO.class,
         UserFeedDAOImpl.class,
         UserFeedRowMapper.class,
@@ -57,7 +59,9 @@ import static org.junit.jupiter.api.Assertions.*;
         DirectorRowMapper.class,
         UserFeedDAOImpl.class,
         UserRowMapper.class,
-        UserFeedRowMapper.class
+        UserFeedRowMapper.class,
+        DirectorService.class,
+        FilmDirectorDAO.class
 })
 class FilmServiceTests {
     private final FilmService filmService;
@@ -216,8 +220,7 @@ class FilmServiceTests {
             users.add(user);
         }
 
-        List<Film> allFilms = filmService.getFilmStorage().getAllFilms();
-        List<Film> noLikeFilms = filmService.getMostPopularFilms(100L, null, null);
+        List<Film> nonLikeFilms = filmService.getMostPopularFilms(10L, null, null);
 
         // Проверяем, что в списке есть 3 фильма (все добавленные, даже без лайков)
         assertEquals(3, noLikeFilms.size(), "Количество элементов не совпадает");

@@ -67,10 +67,10 @@ public class FilmLikeDAO implements LikeDAO {
         String query = "DELETE FROM film_likes WHERE film_id = ? AND user_id = ?";
 
         int affectedRows = jdbc.update(query, film.getId(), userId);
-        if (affectedRows != 1) {
-            log.error("При удалении лайка (ID пользователя: {}) у фильма (ID фильма: {}) " +
-                    "должна быть обработана одна строка, а обработано {} строк.", userId, film.getId(), affectedRows);
-            throw new DataBaseException("Не удалось удалить лайк у фильма.");
+        if (affectedRows == 0) {
+            log.warn("Попытка удалить лайк, которого не существует: фильм ID={}, пользователь ID={}",
+                    film.getId(), userId);
+            return;
         }
         log.info("У фильма с ID: {} успешно удален лайк пользователя с ID: {}.", film.getId(), userId);
     }
