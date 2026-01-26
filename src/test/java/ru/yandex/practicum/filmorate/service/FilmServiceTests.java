@@ -220,7 +220,7 @@ class FilmServiceTests {
         List<Film> noLikeFilms = filmService.getMostPopularFilms(100L, null, null);
 
         // Проверяем, что в списке есть 3 фильма (все добавленные, даже без лайков)
-        assertEquals(3, allFilms.size(), "Количество элементов не совпадает");
+        assertEquals(3, noLikeFilms.size(), "Количество элементов не совпадает");
 
         // Проверяем, что в списке популярных фильмов нет элементов, так как у всех фильмов списки лайков пустые
         assertTrue(noLikeFilms.isEmpty(), "Список не пуст");
