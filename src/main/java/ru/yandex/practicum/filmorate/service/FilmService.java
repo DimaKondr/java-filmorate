@@ -135,6 +135,7 @@ public class FilmService {
     public List<Film> getCommonFilms(Long userId, Long friendId) {
         return filmStorage.getCommonFilms(userId, friendId);
     }
+
     public List<Film> searchFilms(String query, String by) {
         log.info("=== ПОИСК ФИЛЬМОВ В СЕРВИСЕ ===");
         log.info("Запрос: '{}', критерии: '{}'", query, by);
