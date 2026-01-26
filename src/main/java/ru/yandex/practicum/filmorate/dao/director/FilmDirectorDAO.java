@@ -70,6 +70,25 @@ public class FilmDirectorDAO implements DirectorDAO {
         return delete(query2, id);
     }
 
+    @Override
+    public List<Director> getDirectorsOfFilm(Long filmId) {
+        String query = "SELECT id, name " +
+                "FROM directors d " +
+                "JOIN film_directors fd ON d.id = fd.director_id " +
+                "WHERE fd.film_id = ?" +
+                "ORDER BY d.id ASC";
+
+        try {
+            log.info("Начат процесс предоставления списка режиссеров фильма.");
+            List<Director> directors = jdbc.query(query, mapper, filmId);
+            log.info("Список режиссеров фильма успешно предоставлен.");
+            return directors;
+        } catch (DataAccessException e) {
+            log.error("Неудачная попытка получения списка режиссеров фильма. --> {}", e.getMessage());
+            throw new DataBaseException("Не удалось получить список режиссеров фильма.");
+        }
+    }
+
     private Long insert(String query, Object... params) {
         GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
         jdbc.update(connection -> {

@@ -21,4 +21,7 @@ public interface DirectorDAO {
 
     //Удаление режиссёра
     boolean removeDirector(Long id);
+
+    //Получение списка режиссеров определенного фильма
+    List<Director> getDirectorsOfFilm(Long filmId);
 }

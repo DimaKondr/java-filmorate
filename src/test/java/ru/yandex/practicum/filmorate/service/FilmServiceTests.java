@@ -45,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.*;
         FilmLikeDAO.class,
         FilmGenreDAO.class,
         FilmAgeRatingDAO.class,
+        FilmDirectorDAO.class,
         UserFriendshipDAO.class,
         UserFeedDAOImpl.class,
         UserFeedRowMapper.class,
