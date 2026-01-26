@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -34,7 +33,6 @@ public class UserController {
     @GetMapping("/{id}")
     public User getUser(@PathVariable("id")
                         @NotNull(message = "id не может быть null")
-                        @Min(value = 1, message = "id должен быть положительным целым числом")
                         @Valid Long userId) {
         return userService.getUserStorage().getUserById(userId);
     }
@@ -42,7 +40,6 @@ public class UserController {
     @DeleteMapping("/{id}")
     public User removeUser(@PathVariable("id")
                            @NotNull(message = "id не может быть null")
-                           @Min(value = 1, message = "id должен быть положительным целым числом")
                            @Valid Long removedUserId) {
         return userService.getUserStorage().removeUser(removedUserId);
     }
@@ -70,11 +67,9 @@ public class UserController {
     @DeleteMapping("/{id}/friends/{friendId}")
     public User removeFriend(@PathVariable("id")
                              @NotNull(message = "id не может быть null")
-                             @Min(value = 1, message = "id должен быть положительным целым числом")
                              @Valid Long userId,
                              @PathVariable("friendId")
                              @NotNull(message = "id не может быть null")
-                             @Min(value = 1, message = "id должен быть положительным целым числом")
                              @Valid Long removedFriendsId) {
         return userService.removeFriend(userId, removedFriendsId);
     }
@@ -82,7 +77,6 @@ public class UserController {
     @GetMapping("/{id}/friends")
     public List<User> getFriendsListOfUser(@PathVariable("id")
                                            @NotNull(message = "id не может быть null")
-                                           @Min(value = 1, message = "id должен быть положительным целым числом")
                                            @Valid Long userId) {
         return userService.getFriendsListOfUser(userId);
     }
@@ -90,11 +84,9 @@ public class UserController {
     @GetMapping("/{id}/friends/common/{otherId}")
     public List<User> getMutualFriendsList(@PathVariable("id")
                                            @NotNull(message = "id не может быть null")
-                                           @Min(value = 1, message = "id должен быть положительным целым числом")
                                            @Valid Long userId,
                                            @PathVariable("otherId")
                                            @NotNull(message = "id не может быть null")
-                                           @Min(value = 1, message = "id должен быть положительным целым числом")
                                            @Valid Long anotherUserId) {
         return userService.getMutualFriendsList(userId, anotherUserId);
     }
@@ -110,7 +102,6 @@ public class UserController {
     @GetMapping("/{id}/feed")
     public List<UserFeed> getFeed(@PathVariable("id")
                                   @NotNull(message = "id не может быть null")
-                                  @Min(value = 1, message = "id должен быть положительным целым числом")
                                   @Valid Long userId) {
         return userService.getFeedByUserId(userId);
     }

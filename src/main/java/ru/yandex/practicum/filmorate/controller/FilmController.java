@@ -1,7 +1,6 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +33,6 @@ public class FilmController {
     @GetMapping("/{id}")
     public Film getFilm(@PathVariable("id")
                             @NotNull(message = "id не может быть null")
-                            @Min(value = 1, message = "id должен быть положительным целым числом")
                             @Valid Long filmId) {
         return filmService.getFilmStorage().getFilmById(filmId);
     }
@@ -42,7 +40,6 @@ public class FilmController {
     @DeleteMapping("/{id}")
     public Film deleteFilm(@PathVariable("id")
                                @NotNull(message = "id не может быть null")
-                               @Min(value = 1, message = "id должен быть положительным целым числом")
                                @Valid Long deletedFilmId) {
         return filmService.getFilmStorage().removeFilm(deletedFilmId);
     }
@@ -60,11 +57,9 @@ public class FilmController {
     @PutMapping("/{id}/like/{userId}")
     public Film addLike(@PathVariable("id")
                             @NotNull(message = "id не может быть null")
-                            @Min(value = 1, message = "id должен быть положительным целым числом")
                             @Valid Long likedFilmId,
                         @PathVariable("userId")
                             @NotNull(message = "id не может быть null")
-                            @Min(value = 1, message = "id должен быть положительным целым числом")
                             @Valid Long userId) {
         return filmService.addLike(likedFilmId, userId);
     }
@@ -72,11 +67,9 @@ public class FilmController {
     @DeleteMapping("/{id}/like/{userId}")
     public Film removeLike(@PathVariable("id")
                                @NotNull(message = "id не может быть null")
-                               @Min(value = 1, message = "id должен быть положительным целым числом")
                                @Valid Long likedFilmId,
                            @PathVariable("userId")
                                @NotNull(message = "id не может быть null")
-                               @Min(value = 1, message = "id должен быть положительным целым числом")
                                @Valid Long userId) {
         return filmService.removeLike(likedFilmId, userId);
     }
