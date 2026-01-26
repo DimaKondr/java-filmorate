@@ -8,9 +8,11 @@ import ru.yandex.practicum.filmorate.model.Film;
 
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component("inMemoryFilmStorage")
 @Slf4j
@@ -124,6 +126,44 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public List<Film> getCommonFilms(Long userId, Long friendId) {
         return List.of();
+    }
+
+    @Override
+    public List<Film> searchFilms(String query, List<String> criteria) {
+        log.info("Поиск фильмов in-memory по запросу: '{}' с критериями: {}", query, criteria);
+
+        if (query == null || query.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        String searchQuery = query.toLowerCase().trim();
+
+        return films.values().stream()
+                .filter(film -> {
+                    boolean matches = false;
+
+                    // Поиск по названию
+                    if (criteria.contains("title")) {
+                        matches = film.getName().toLowerCase().contains(searchQuery);
+                    }
+
+                    // Поиск по режиссеру
+                    if (!matches && criteria.contains("director")) {
+                        matches = film.getDirectors().stream()
+                                .anyMatch(director -> director != null &&
+                                        director.getName() != null &&
+                                        director.getName().toLowerCase().contains(searchQuery));
+                    }
+
+                    return matches;
+                })
+                .sorted((f1, f2) -> {
+                    // Сортировка по количеству лайков (убывающий порядок)
+                    int likes1 = f1.getFilmLikedUsersId().size();
+                    int likes2 = f2.getFilmLikedUsersId().size();
+                    return Integer.compare(likes2, likes1);
+                })
+                .collect(Collectors.toList());
     }
 
     //Генерируем ID нового фильма

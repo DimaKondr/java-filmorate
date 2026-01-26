@@ -29,4 +29,7 @@ public interface FilmStorage {
 
     //Вывод общих с другом фильмов с сортировкой по их популярности.
     List<Film> getCommonFilms(Long userId, Long friendId);
+
+    //Поиск фильмов по критериям.
+    List<Film> searchFilms(String query, List<String> criteria);
 }
