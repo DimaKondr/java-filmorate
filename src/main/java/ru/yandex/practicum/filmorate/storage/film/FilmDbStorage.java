@@ -197,7 +197,7 @@ public class FilmDbStorage implements FilmStorage {
             oldFilm.getDirectors().addAll(loadDirector(oldFilm.getId()));
         }
 
-        return oldFilm;
+        return getFilmById(oldFilm.getId());
     }
 
     @Override
