@@ -310,7 +310,7 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> getFilmsByDirectorSortedByLikes(Long directorId) {
-        String query = "SELECT f.id, f.name, f.description, f.release_date, f.duration " +
+        String query = "SELECT f.id " +
                 "FROM films AS f " +
                 "JOIN film_directors AS f_d ON f_d.film_id = f.id " +
                 "LEFT JOIN film_likes AS f_l ON f_l.film_id = f.id " +
@@ -318,49 +318,42 @@ public class FilmDbStorage implements FilmStorage {
                 "GROUP BY f.id " +
                 "ORDER BY COUNT(f_l.user_id) DESC";
 
-        List<Film> films = jdbc.query(query, mapper, directorId);
+        List<Long> filmIds = jdbc.queryForList(query, Long.class, directorId);
 
-        for (Film film : films) {
-            film.getDirectors().addAll(loadDirector(film.getId()));
-        }
-
-        return films;
+        return filmIds.stream()
+                .map(this::getFilmById)
+                .toList();
     }
 
     @Override
     public List<Film> getFilmsByDirectorSortedByYear(Long directorId) {
-        String query = "SELECT f.id, f.name, f.description, f.release_date, f.duration " +
+        String query = "SELECT f.id " +
                 "FROM films AS f " +
                 "JOIN film_directors AS f_d ON f_d.film_id = f.id " +
                 "WHERE f_d.director_id = ? " +
                 "ORDER BY f.release_date ASC";
-        List<Film> films = jdbc.query(query, mapper, directorId);
+        List<Long> filmIds = jdbc.queryForList(query, Long.class, directorId);
 
-        for (Film film : films) {
-            film.getDirectors().addAll(loadDirector(film.getId()));
-        }
-
-        return films;
+        return filmIds.stream()
+                .map(this::getFilmById)
+                .toList();
     }
 
     @Override
     public List<Film> getCommonFilms(Long userId, Long friendId) {
-        String query = "SELECT f.id, f.name, f.description, f.release_date, f.duration " +
+        String query = "SELECT f.id " +
                 "FROM films AS f " +
                 "JOIN film_likes AS f_l ON f_l.film_id = f.id " +
                 "WHERE f_l.user_id IN (?, ?) " +
-                "GROUP BY f.id, f.name, f.description, f.release_date, f.duration " +
+                "GROUP BY f.id " +
                 "HAVING COUNT(DISTINCT f_l.user_id) = 2 " +
                 "ORDER BY COUNT(f_l.user_id) DESC";
 
-        List<Film> films = jdbc.query(query, mapper, userId, friendId);
+        List<Long> filmsIds = jdbc.queryForList(query, Long.class, userId, friendId);
 
-        for (Film film : films) {
-            List<FilmGenre> filmGenres = genreDAO.getGenresOfFilm(film);
-            film.getGenres().addAll(filmGenres);
-        }
-
-        return films;
+        return filmsIds.stream()
+                .map(this::getFilmById)
+                .toList();
     }
 
     private void addDirectors(Film film) {
