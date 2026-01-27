@@ -83,7 +83,7 @@ public class FilmDbStorage implements FilmStorage {
                 ratingDAO.addRatingToFilm(film);
             }
             addDirectors(film);
-            return film;
+            return getFilmById(film.getId());
         } else {
             log.error("Не удалось добавить новый фильм, так как ID имеет null-значение.");
             throw new DataBaseException("Не удалось добавить фильм.");

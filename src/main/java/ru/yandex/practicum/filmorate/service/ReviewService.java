@@ -31,6 +31,7 @@ public class ReviewService {
         log.info("Добавление отзыва пользователем ID: {} для фильма ID: {}",
                 review.getUserId(), review.getFilmId());
         Review createdReview = reviewStorage.addReview(review);
+
         userFeedDAO.addReviewEvent(review.getUserId(), createdReview.getReviewId(), Operation.ADD);
         log.info("Отзыв добавлен с ID: {}", createdReview.getReviewId());
         return createdReview;
@@ -39,7 +40,8 @@ public class ReviewService {
     public Review updateReview(Review review) {
         log.info("Обновление отзыва ID: {}", review.getReviewId());
         Review updatedReview = reviewStorage.updateReview(review);
-        userFeedDAO.addReviewEvent(review.getUserId(), updatedReview.getReviewId(), Operation.UPDATE);
+
+        userFeedDAO.addReviewEvent(updatedReview.getUserId(), updatedReview.getReviewId(), Operation.UPDATE);
         log.info("Отзыв ID: {} обновлен", updatedReview.getReviewId());
         return updatedReview;
     }
@@ -48,6 +50,7 @@ public class ReviewService {
         log.info("Удаление отзыва ID: {}", reviewId);
         Review review = reviewStorage.getReviewById(reviewId);
         Review removedReview = reviewStorage.removeReview(reviewId);
+
         userFeedDAO.addReviewEvent(review.getUserId(), reviewId, Operation.REMOVE);
         log.info("Отзыв ID: {} удален", reviewId);
         return removedReview;
@@ -70,28 +73,24 @@ public class ReviewService {
     public Review addLike(Long reviewId, Long userId) {
         log.info("Добавление лайка отзыву ID: {} пользователем ID: {}", reviewId, userId);
         reviewDAO.addLikeToReview(reviewId, userId);
-        userFeedDAO.addReviewEvent(userId, reviewId, Operation.ADD);
         return reviewStorage.getReviewById(reviewId);
     }
 
     public Review addDislike(Long reviewId, Long userId) {
         log.info("Добавление дизлайка отзыву ID: {} пользователем ID: {}", reviewId, userId);
         reviewDAO.addDislikeToReview(reviewId, userId);
-        userFeedDAO.addReviewEvent(userId, reviewId, Operation.ADD);
         return reviewStorage.getReviewById(reviewId);
     }
 
     public Review removeLike(Long reviewId, Long userId) {
         log.info("Удаление лайка отзыву ID: {} пользователем ID: {}", reviewId, userId);
         reviewDAO.removeLikeFromReview(reviewId, userId);
-        userFeedDAO.addReviewEvent(userId, reviewId, Operation.REMOVE);
         return reviewStorage.getReviewById(reviewId);
     }
 
     public Review removeDislike(Long reviewId, Long userId) {
         log.info("Удаление дизлайка отзыву ID: {} пользователем ID: {}", reviewId, userId);
         reviewDAO.removeDislikeFromReview(reviewId, userId);
-        userFeedDAO.addReviewEvent(userId, reviewId, Operation.REMOVE);
         return reviewStorage.getReviewById(reviewId);
     }
 }
