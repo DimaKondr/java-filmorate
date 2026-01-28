@@ -2,7 +2,6 @@ package ru.yandex.practicum.filmorate.model;
 
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -11,7 +10,6 @@ import java.util.Set;
 
 @Data
 @AllArgsConstructor
-@Builder
 public class User {
     private final Set<UserFriendship> friendships = new HashSet<>();
     private Long id;

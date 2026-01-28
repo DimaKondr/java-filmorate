@@ -6,9 +6,7 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component("inMemoryUserStorage")
 @Slf4j
@@ -113,6 +111,11 @@ public class InMemoryUserStorage implements UserStorage {
         }
         log.error("Попытка получения пользователя по ID. Пользователь с ID: {} не найден", userId);
         throw new NotFoundException("Попытка получения пользователя. Пользователь с ID: " + userId + " не найден");
+    }
+
+    @Override
+    public Set<Long> getUserLikes(Long userId) {
+        return new HashSet<>();
     }
 
     //Генерируем ID нового пользователя

@@ -7,21 +7,30 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
+import ru.yandex.practicum.filmorate.dao.director.DirectorRowMapper;
+import ru.yandex.practicum.filmorate.dao.feed.UserFeedDAOImpl;
+import ru.yandex.practicum.filmorate.dao.feed.UserFeedRowMapper;
 import ru.yandex.practicum.filmorate.dao.friendship.FriendshipRowMapper;
 import ru.yandex.practicum.filmorate.dao.friendship.UserFriendshipDAO;
+
+import ru.yandex.practicum.filmorate.dao.genre.FilmGenreDAO;
+import ru.yandex.practicum.filmorate.dao.genre.GenreRowMapper;
+import ru.yandex.practicum.filmorate.dao.like.FilmLikeDAO;
+import ru.yandex.practicum.filmorate.dao.rating.FilmAgeRatingDAO;
+import ru.yandex.practicum.filmorate.dao.rating.RatingRowMapper;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.model.UserFriendship;
+import ru.yandex.practicum.filmorate.model.UserFeed;
+import ru.yandex.practicum.filmorate.storage.film.FilmDbStorage;
+import ru.yandex.practicum.filmorate.storage.film.FilmRowMapper;
 import ru.yandex.practicum.filmorate.storage.user.UserDbStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserRowMapper;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.time.Month;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -29,17 +38,28 @@ import static org.junit.jupiter.api.Assertions.*;
 @AutoConfigureTestDatabase
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
 @Import({
+        FilmDbStorage.class,
         UserDbStorage.class,
+        FilmLikeDAO.class,
+        FilmGenreDAO.class,
+        FilmAgeRatingDAO.class,
         UserFriendshipDAO.class,
+        UserFeedDAOImpl.class,
+        UserFeedRowMapper.class,
         UserService.class,
+        FilmRowMapper.class,
         UserRowMapper.class,
+        GenreRowMapper.class,
+        RatingRowMapper.class,
+        FriendshipRowMapper.class,
+        DirectorRowMapper.class,
         FriendshipRowMapper.class
-        })
+})
 class UserServiceTests {
     private final UserService userService;
-    User user1;
-    User user2;
-    UserStorage userStorage;
+    private UserStorage userStorage;
+    private User user1;
+    private User user2;
 
     @BeforeEach
     void setUp() {
@@ -51,148 +71,155 @@ class UserServiceTests {
     }
 
     @Test
-    void addValidFriendTesting() {
-        User addedUser1 = userStorage.addUser(user1);
-        User addedUser2 = userStorage.addUser(user2);
-
-        User updatedUser1 = userService.addFriend(addedUser1.getId(), addedUser2.getId());
-        User updatedUser2 = userService.addFriend(addedUser2.getId(), addedUser1.getId());
-
-        List<User> friendsList1 = new ArrayList<>(userService.getFriendsListOfUser(addedUser1.getId()));
-        List<User> friendsList2 = new ArrayList<>(userService.getFriendsListOfUser(addedUser2.getId()));
-
-        UserFriendship test1 = userService.getFriendshipDAO().getFriendshipStatus(addedUser1, addedUser2);
-        UserFriendship test2 = userService.getFriendshipDAO().getFriendshipStatus(addedUser2, addedUser1);
-
-        // Проверяем, что в обоих списках нужные данные о дружбе
-        assertEquals(1, friendsList1.size(), "Количество элементов не совпадает");
-        assertEquals(1, friendsList2.size(), "Количество элементов не совпадает");
-        assertEquals(test1.getFriendId(), friendsList1.get(0).getId(), "Данные не совпадают");
-        assertEquals(test2.getFriendId(), friendsList2.get(0).getId(), "Данные не совпадают");
-    }
-
-    @Test
-    void addFriendWithSameIdTesting() {
-        User addedUser1 = userStorage.addUser(user1);
-        User addedUser2 = userStorage.addUser(user2);
-
-        // Проверяем, что было выброшено необходимое исключение, так как предоставлены одинаковые ID
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> userService.addFriend(addedUser2.getId(), addedUser2.getId()),
-                "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("ID=" + addedUser2.getId() + " пользователя и ID= "
-                        + addedUser2.getId() + " друга для добавления совпадают",
-                exception.getMessage(), "Сообщения не совпадают");
-    }
-
-    @Test
-    void addFriendWithInvalidUserIdTesting() {
-        User addedUser1 = userStorage.addUser(user1);
-        User addedUser2 = userStorage.addUser(user2);
-
-        // Сгенерируем случайный ID
-        Long uniqueId = generateUniqueId(addedUser1.getId(), addedUser2.getId());
-
-        // Проверяем, что было выброшено необходимое исключение, так как ID пользователя не найден
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userService.addFriend(uniqueId, addedUser2.getId()),
-                "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Попытка получения пользователя. Пользователь с ID: " + uniqueId + " не найден",
-                exception.getMessage(), "Сообщения не совпадают");
-    }
-
-    @Test
-    void addFriendWithInvalidFriendIdTesting() {
-        User addedUser1 = userStorage.addUser(user1);
-        User addedUser2 = userStorage.addUser(user2);
-
-        // Сгенерируем случайный ID
-        Long uniqueId = generateUniqueId(addedUser1.getId(), addedUser2.getId());
-
-        // Проверяем, что было выброшено необходимое исключение, так как ID друга не найден
-        NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userService.addFriend(addedUser1.getId(), uniqueId),
-                "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Попытка получения пользователя. Пользователь с ID: " + uniqueId + " не найден",
-                exception.getMessage(), "Сообщения не совпадают");
-    }
-
-    @Test
-    void removeValidFriendTesting() {
+    void addValidFriend_shouldAddFriendAndCreateFeedEvent() {
         User addedUser1 = userStorage.addUser(user1);
         User addedUser2 = userStorage.addUser(user2);
 
         userService.addFriend(addedUser1.getId(), addedUser2.getId());
         userService.addFriend(addedUser2.getId(), addedUser1.getId());
-        List<User> friendsList1 = new ArrayList<>(userService.getFriendsListOfUser(addedUser1.getId()));
-        List<User> friendsList2 = new ArrayList<>(userService.getFriendsListOfUser(addedUser2.getId()));
 
-        // Проверяем, что в списках по одному элементу
-        assertEquals(1, friendsList1.size(), "В списке не один элемент");
-        assertEquals(1, friendsList2.size(), "В списке не один элемент");
+        List<User> friendsList1 = userService.getFriendsListOfUser(addedUser1.getId());
+        List<User> friendsList2 = userService.getFriendsListOfUser(addedUser2.getId());
+
+        assertEquals(1, friendsList1.size());
+        assertEquals(1, friendsList2.size());
+        assertEquals(addedUser2.getId(), friendsList1.get(0).getId());
+        assertEquals(addedUser1.getId(), friendsList2.get(0).getId());
+
+        List<UserFeed> feed1 = userService.getFeedByUserId(addedUser1.getId());
+        List<UserFeed> feed2 = userService.getFeedByUserId(addedUser2.getId());
+
+        assertEquals(1, feed1.size());
+        assertEquals(1, feed2.size());
+        assertEquals("FRIEND", feed1.get(0).getEventType().name());
+        assertEquals("ADD", feed1.get(0).getOperation().name());
+        assertEquals(addedUser2.getId(), feed1.get(0).getEntityId());
+        assertEquals("FRIEND", feed2.get(0).getEventType().name());
+        assertEquals("ADD", feed2.get(0).getOperation().name());
+        assertEquals(addedUser1.getId(), feed2.get(0).getEntityId());
+    }
+
+    @Test
+    void addFriend_withSameIds_shouldThrowValidationException() {
+        User addedUser = userStorage.addUser(user1);
+
+        ValidationException exception = assertThrows(ValidationException.class,
+                () -> userService.addFriend(addedUser.getId(), addedUser.getId()));
+
+        assertEquals("ID=" + addedUser.getId() + " пользователя и ID= " +
+                addedUser.getId() + " друга для добавления совпадают", exception.getMessage());
+    }
+
+    @Test
+    void addFriend_withNonExistentUserId_shouldThrowNotFoundException() {
+        User addedUser = userStorage.addUser(user1);
+        Long nonExistentId = 999L;
+
+        NotFoundException exception = assertThrows(NotFoundException.class,
+                () -> userService.addFriend(nonExistentId, addedUser.getId()));
+
+        assertEquals("Попытка получения пользователя. Пользователь с ID: " + nonExistentId + " не найден",
+                exception.getMessage());
+    }
+
+    @Test
+    void addFriend_withNonExistentFriendId_shouldThrowNotFoundException() {
+        User addedUser = userStorage.addUser(user1);
+        Long nonExistentId = 999L;
+
+        NotFoundException exception = assertThrows(NotFoundException.class,
+                () -> userService.addFriend(addedUser.getId(), nonExistentId));
+
+        assertEquals("Попытка получения пользователя. Пользователь с ID: " + nonExistentId + " не найден",
+                exception.getMessage());
+    }
+
+    @Test
+    void removeValidFriend_shouldRemoveFriendAndCreateFeedEvent() {
+        User addedUser1 = userStorage.addUser(user1);
+        User addedUser2 = userStorage.addUser(user2);
+
+        userService.addFriend(addedUser1.getId(), addedUser2.getId());
+        userService.addFriend(addedUser2.getId(), addedUser1.getId());
+
+        List<User> friendsList1 = userService.getFriendsListOfUser(addedUser1.getId());
+        List<User> friendsList2 = userService.getFriendsListOfUser(addedUser2.getId());
+        assertEquals(1, friendsList1.size());
+        assertEquals(1, friendsList2.size());
 
         userService.removeFriend(addedUser1.getId(), addedUser2.getId());
         userService.removeFriend(addedUser2.getId(), addedUser1.getId());
-        List<User> friendsList3 = new ArrayList<>(userService.getFriendsListOfUser(addedUser1.getId()));
-        List<User> friendsList4 = new ArrayList<>(userService.getFriendsListOfUser(addedUser2.getId()));
 
-        // Проверяем, что в оба списка пусты
-        assertTrue(friendsList3.isEmpty(), "Список не пуст");
-        assertTrue(friendsList4.isEmpty(), "Список не пуст");
+        List<User> friendsList3 = userService.getFriendsListOfUser(addedUser1.getId());
+        List<User> friendsList4 = userService.getFriendsListOfUser(addedUser2.getId());
+        assertTrue(friendsList3.isEmpty());
+        assertTrue(friendsList4.isEmpty());
+
+        List<UserFeed> feed1 = userService.getFeedByUserId(addedUser1.getId());
+        List<UserFeed> feed2 = userService.getFeedByUserId(addedUser2.getId());
+
+        assertEquals(2, feed1.size());
+        assertEquals(2, feed2.size());
+
+        // Проверяем порядок событий (старые первыми)
+        assertEquals("ADD", feed1.get(0).getOperation().name(), "Первое событие должно быть ADD");
+        assertEquals("REMOVE", feed1.get(1).getOperation().name(), "Второе событие должно быть REMOVE");
+
+        assertEquals("ADD", feed2.get(0).getOperation().name(), "Первое событие должно быть ADD");
+        assertEquals("REMOVE", feed2.get(1).getOperation().name(), "Второе событие должно быть REMOVE");
+
+        // Проверяем, что timestamp возрастает
+        assertTrue(feed1.get(0).getTimestamp() < feed1.get(1).getTimestamp(),
+                "Второе событие должно иметь больший timestamp");
     }
 
     @Test
-    void removeFriendWithSameIdTesting() {
-        User addedUser1 = userStorage.addUser(user1);
-        User addedUser2 = userStorage.addUser(user2);
-        userService.addFriend(addedUser1.getId(), addedUser2.getId());
+    void removeFriend_withSameIds_shouldThrowValidationException() {
+        User addedUser = userStorage.addUser(user1);
 
-        // Проверяем, что было выброшено необходимое исключение, так как предоставлены одинаковые ID
         ValidationException exception = assertThrows(ValidationException.class,
-                () -> userService.removeFriend(addedUser2.getId(), addedUser2.getId()),
-                "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("ID=" + addedUser2.getId() + " пользователя и ID= "
-                        + addedUser2.getId() + " друга для добавления совпадают",
-                exception.getMessage(), "Сообщения не совпадают");
+                () -> userService.removeFriend(addedUser.getId(), addedUser.getId()));
+
+        assertEquals("ID=" + addedUser.getId() + " пользователя и ID= " +
+                addedUser.getId() + " друга для добавления совпадают", exception.getMessage());
     }
 
     @Test
-    void removeFriendWithInvalidUserIdTesting() {
+    void removeFriend_withNonExistentUserId_shouldThrowNotFoundException() {
         User addedUser1 = userStorage.addUser(user1);
         User addedUser2 = userStorage.addUser(user2);
         userService.addFriend(addedUser1.getId(), addedUser2.getId());
 
-        // Сгенерируем случайный ID
-        Long uniqueId = generateUniqueId(addedUser1.getId(), addedUser2.getId());
+        Long nonExistentId = 999L;
 
-        // Проверяем, что было выброшено необходимое исключение, так как ID пользователя не найден
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userService.removeFriend(uniqueId, addedUser2.getId()),
-                "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Попытка получения пользователя. Пользователь с ID: " + uniqueId + " не найден",
-                exception.getMessage(), "Сообщения не совпадают");
+                () -> userService.removeFriend(nonExistentId, addedUser2.getId()));
+
+        assertEquals("Попытка получения пользователя. Пользователь с ID: " + nonExistentId + " не найден",
+                exception.getMessage());
     }
 
     @Test
-    void removeFriendWithInvalidFriendIdTesting() {
+    void removeFriend_withNonExistentFriendId_shouldThrowNotFoundException() {
         User addedUser1 = userStorage.addUser(user1);
         User addedUser2 = userStorage.addUser(user2);
         userService.addFriend(addedUser1.getId(), addedUser2.getId());
-
-        // Проверяем, что было выброшено необходимое исключение, так как ID друга не найден
+        Long invalidId = 999999L;
         NotFoundException exception = assertThrows(NotFoundException.class,
-                () -> userService.removeFriend(addedUser1.getId(), 4L),
+                () -> userService.removeFriend(addedUser1.getId(), invalidId),
                 "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Попытка получения пользователя. Пользователь с ID: " + 4L + " не найден",
+        assertEquals("Попытка получения пользователя. Пользователь с ID: " + invalidId + " не найден",
                 exception.getMessage(), "Сообщения не совпадают");
+
     }
 
     @Test
-    void getFriendsListOfUserTesting() {
+    void getFriendsListOfUser_shouldReturnAllFriends() {
         User user3 = new User(null, "testemail3@testemail.com", "TestLogin3", "TestName3",
                 LocalDate.of(2000, Month.JANUARY, 15));
         User user4 = new User(null, "testemail4@testemail.com", "TestLogin4", "TestName4",
                 LocalDate.of(2000, Month.JANUARY, 15));
+
         User addedUser1 = userStorage.addUser(user1);
         User addedUser2 = userStorage.addUser(user2);
         User addedUser3 = userStorage.addUser(user3);
@@ -202,23 +229,20 @@ class UserServiceTests {
         userService.addFriend(addedUser1.getId(), addedUser3.getId());
         userService.addFriend(addedUser1.getId(), addedUser4.getId());
 
-        List<User> testList = new ArrayList<>();
-        testList.add(addedUser2);
-        testList.add(addedUser3);
-        testList.add(addedUser4);
         List<User> friendsList = userService.getFriendsListOfUser(addedUser1.getId());
+        assertEquals(3, friendsList.size());
 
-        // Проверяем, что в списке верное количество друзей и данные совпадают
-        assertEquals(3, friendsList.size(), "Количество элементов не совпадает");
-        assertEquals(testList, friendsList, "Списки не совпадают");
+        List<UserFeed> feed = userService.getFeedByUserId(addedUser1.getId());
+        assertEquals(3, feed.size(), "Должно быть 3 события в ленте после добавления 3 друзей");
     }
 
     @Test
-    void getMutualFriendsListTesting() {
+    void getMutualFriends_shouldReturnCommonFriends() {
         User user3 = new User(null, "testemail3@testemail.com", "TestLogin3", "TestName3",
                 LocalDate.of(2000, Month.JANUARY, 15));
         User user4 = new User(null, "testemail4@testemail.com", "TestLogin4", "TestName4",
                 LocalDate.of(2000, Month.JANUARY, 15));
+
         User addedUser1 = userStorage.addUser(user1);
         User addedUser2 = userStorage.addUser(user2);
         User addedUser3 = userStorage.addUser(user3);
@@ -229,27 +253,83 @@ class UserServiceTests {
         userService.addFriend(addedUser4.getId(), addedUser3.getId());
         userService.addFriend(addedUser4.getId(), addedUser2.getId());
 
-        List<User> mutualFriendsList1 = userService.getMutualFriendsList(addedUser1.getId(), addedUser4.getId());
-        List<User> mutualFriendsList2 = userService.getMutualFriendsList(addedUser2.getId(), addedUser4.getId());
+        List<User> mutualFriends1 = userService.getMutualFriendsList(addedUser1.getId(), addedUser4.getId());
+        List<User> mutualFriends2 = userService.getMutualFriendsList(addedUser2.getId(), addedUser4.getId());
 
-        // Проверяем, что в списках верное количество элементов и данные совпадают
-        assertEquals(1, mutualFriendsList1.size(), "Количество элементов не совпадает");
-        assertEquals(1, mutualFriendsList2.size(), "Количество элементов не совпадает");
-        assertEquals(addedUser2.getId(), mutualFriendsList1.get(0).getId(), "ID не совпадают");
-        assertEquals(addedUser3.getId(), mutualFriendsList2.get(0).getId(), "ID не совпадают");
+        assertEquals(1, mutualFriends1.size());
+        assertEquals(1, mutualFriends2.size());
+        assertEquals(addedUser2.getId(), mutualFriends1.get(0).getId());
+        assertEquals(addedUser3.getId(), mutualFriends2.get(0).getId());
     }
 
-    // Вспомогательный метод для генерации случайного ID, которого не должно быть в базе
-    Long generateUniqueId(Long id1, Long id2) {
-        Random random = new Random();
-        long uniqueId;
-        while (true) {
-            long result = random.nextLong();
-            if (result != id1 && result != id2) {
-                uniqueId = result;
-                return uniqueId;
-            }
-        }
+    @Test
+    void getUserFeed_shouldReturnEventsForUser() {
+        User addedUser1 = userStorage.addUser(user1);
+        User addedUser2 = userStorage.addUser(user2);
+
+        userService.addFriend(addedUser1.getId(), addedUser2.getId());
+
+        List<UserFeed> feed = userService.getFeedByUserId(addedUser1.getId());
+
+        assertNotNull(feed);
+        assertEquals(1, feed.size());
+
+        UserFeed event = feed.get(0);
+        assertEquals(addedUser1.getId(), event.getUserId());
+        assertEquals("FRIEND", event.getEventType().name());
+        assertEquals("ADD", event.getOperation().name());
+        assertEquals(addedUser2.getId(), event.getEntityId());
+        assertNotNull(event.getTimestamp());
     }
 
+    @Test
+    void getUserFeed_withNonExistentUser_shouldThrowNotFoundException() {
+        NotFoundException exception = assertThrows(NotFoundException.class,
+                () -> userService.getFeedByUserId(999L));
+
+        assertEquals("Попытка получения пользователя. Пользователь с ID: 999 не найден",
+                exception.getMessage());
+    }
+
+    @Test
+    void getEmptyUserFeed_shouldReturnEmptyList() {
+        User addedUser1 = userStorage.addUser(user1);
+
+        List<UserFeed> feed = userService.getFeedByUserId(addedUser1.getId());
+
+        assertNotNull(feed);
+        assertTrue(feed.isEmpty());
+    }
+
+    @Test
+    void feedEventsAreSortedChronologically() throws InterruptedException {
+        User user1 = new User(null, "user1@mail.ru", "user1", "User One",
+                LocalDate.of(1990, 1, 1));
+        User user2 = new User(null, "user2@mail.ru", "user2", "User Two",
+                LocalDate.of(1992, 2, 2));
+        User user3 = new User(null, "user3@mail.ru", "user3", "User Three",
+                LocalDate.of(1993, 3, 3));
+
+        User savedUser1 = userStorage.addUser(user1);
+        User savedUser2 = userStorage.addUser(user2);
+        User savedUser3 = userStorage.addUser(user3);
+
+        userService.addFriend(savedUser1.getId(), savedUser2.getId());
+        Thread.sleep(10);
+        userService.addFriend(savedUser1.getId(), savedUser3.getId());
+
+        List<UserFeed> feed = userService.getFeedByUserId(savedUser1.getId());
+
+        assertEquals(2, feed.size());
+
+        // События должны быть в хронологическом порядке (старые первыми)
+        assertEquals(savedUser2.getId(), feed.get(0).getEntityId(),
+                "Первое добавление должно быть первым в ленте");
+        assertEquals(savedUser3.getId(), feed.get(1).getEntityId(),
+                "Второе добавление должно быть вторым в ленте");
+
+        // Проверяем, что timestamp возрастает
+        assertTrue(feed.get(0).getTimestamp() < feed.get(1).getTimestamp(),
+                "События должны быть отсортированы по возрастанию timestamp");
+    }
 }

@@ -21,4 +21,15 @@ public interface FilmStorage {
     // Получаем фильм по ID.
     Film getFilmById(Long filmId);
 
+    //Вывод всех фильмов режиссёра, отсортированных по количеству лайков.
+    List<Film> getFilmsByDirectorSortedByLikes(Long id);
+
+    //Вывод всех фильмов режиссёра, отсортированных по годам.
+    List<Film> getFilmsByDirectorSortedByYear(Long id);
+
+    //Вывод общих с другом фильмов с сортировкой по их популярности.
+    List<Film> getCommonFilms(Long userId, Long friendId);
+
+    //Поиск фильмов по критериям.
+    List<Film> searchFilms(String query, List<String> criteria);
 }

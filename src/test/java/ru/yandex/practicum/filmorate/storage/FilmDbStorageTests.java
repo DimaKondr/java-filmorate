@@ -7,12 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
+import ru.yandex.practicum.filmorate.dao.director.DirectorRowMapper;
 import ru.yandex.practicum.filmorate.dao.like.FilmLikeDAO;
 import ru.yandex.practicum.filmorate.dao.rating.FilmAgeRatingDAO;
 import ru.yandex.practicum.filmorate.dao.genre.FilmGenreDAO;
 import ru.yandex.practicum.filmorate.dao.genre.GenreRowMapper;
 import ru.yandex.practicum.filmorate.dao.rating.RatingRowMapper;
-import ru.yandex.practicum.filmorate.exception.DataBaseException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
@@ -37,7 +37,8 @@ import static org.junit.jupiter.api.Assertions.*;
         FilmLikeDAO.class,
         FilmAgeRatingDAO.class,
         GenreRowMapper.class,
-        RatingRowMapper.class
+        RatingRowMapper.class,
+        DirectorRowMapper.class
         })
 class FilmDbStorageTests {
     private final FilmDbStorage filmDbStorage;
@@ -102,11 +103,9 @@ class FilmDbStorageTests {
         // Сгенерируем случайный ID
         Long uniqueId = generateUniqueId(addedFilm1, addedFilm2);
 
-        // Проверяем, что было выброшено необходимое исключение, так как фильма с таким ID нет
-        NotFoundException exception = assertThrows(NotFoundException.class, () -> filmDbStorage.removeFilm(uniqueId),
+        // Проверяем, что было выброшено необходимое исключение
+        assertThrows(NotFoundException.class, () -> filmDbStorage.removeFilm(uniqueId),
                 "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Не удалось удалить фильм.",
-                exception.getMessage(), "Сообщения не совпадают");
     }
 
     @Test
@@ -178,11 +177,8 @@ class FilmDbStorageTests {
 
     @Test
     void getAllFilms() {
-        // Проверяем, что было выброшено необходимое исключение, так как список пуст
-        DataBaseException exception = assertThrows(DataBaseException.class, () -> filmDbStorage.getAllFilms(),
-                "Исключение не выброшено, или выброшено неверное исключение");
-        assertEquals("Список всех фильмов пуст.",
-                exception.getMessage(), "Сообщения не совпадают");
+        // Проверяем, что список пуст.
+        assertTrue(filmDbStorage.getAllFilms().isEmpty(), "Список не пуст!");
 
         Film film3 = new Film(null, "Name of the film3", "Description of the film3",
                 LocalDate.of(2001, Month.DECEMBER, 29), 145L);

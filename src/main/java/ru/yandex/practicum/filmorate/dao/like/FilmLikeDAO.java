@@ -4,13 +4,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementSetter;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.exception.DataBaseException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.storage.film.FilmRowMapper;
 
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -20,6 +24,7 @@ import java.util.Set;
 @Slf4j
 public class FilmLikeDAO implements LikeDAO {
     private final JdbcTemplate jdbc;
+    private final FilmRowMapper mapper;
 
     @Override
     public void addLikeToFilm(Film film, Long userId) {
@@ -62,10 +67,10 @@ public class FilmLikeDAO implements LikeDAO {
         String query = "DELETE FROM film_likes WHERE film_id = ? AND user_id = ?";
 
         int affectedRows = jdbc.update(query, film.getId(), userId);
-        if (affectedRows != 1) {
-            log.error("При удалении лайка (ID пользователя: {}) у фильма (ID фильма: {}) " +
-                    "должна быть обработана одна строка, а обработано {} строк.", userId, film.getId(), affectedRows);
-            throw new DataBaseException("Не удалось удалить лайк у фильма.");
+        if (affectedRows == 0) {
+            log.warn("Попытка удалить лайк, которого не существует: фильм ID={}, пользователь ID={}",
+                    film.getId(), userId);
+            return;
         }
         log.info("У фильма с ID: {} успешно удален лайк пользователя с ID: {}.", film.getId(), userId);
     }
@@ -100,32 +105,67 @@ public class FilmLikeDAO implements LikeDAO {
     }
 
     @Override
-    public List<Long> getIdOfMostPopularFilms(Long mostPopularFilmCount) {
-        String query = "SELECT film_id " +
-                "FROM film_likes " +
-                "GROUP BY film_id " +
-                "ORDER BY COUNT(user_id) DESC " +
-                "LIMIT ?";
+    public List<Film> getMostPopularFilms(Long count, Long genreId, Long year) {
+        StringBuilder sb = new StringBuilder("SELECT f.id, f.name, f.description, f.release_date, f.duration " +
+                "FROM films AS f " +
+                "LEFT JOIN film_likes AS fl ON f.id = fl.film_id ");
+
+        List<Long> params = new ArrayList<>();
+        List<String> whereConditions = new ArrayList<>();
+
+        if (genreId != null) {
+            sb.append("JOIN film_genres AS fg ON f.id = fg.film_id ");
+        }
+
+        if (year != null) {
+            whereConditions.add("EXTRACT(YEAR FROM f.release_date) = ?");
+            params.add(year);
+        }
+
+        if (genreId != null) {
+            whereConditions.add("fg.genre_id = ?");
+            params.add(genreId);
+        }
+
+        if (!whereConditions.isEmpty()) {
+            sb.append("WHERE ");
+            sb.append(String.join(" AND ", whereConditions));
+        }
+
+        sb.append("GROUP BY f.id " +
+                "ORDER BY COUNT(fl.user_id) DESC " +
+                "LIMIT ?");
+        params.add(count);
+        String querySB = sb.toString();
 
         try {
-            log.info("Начат процесс получения ID у {} самых популярных фильмов.", mostPopularFilmCount);
-            List<Long> idOfMostPopularFilms = jdbc.queryForList(query, Long.class, mostPopularFilmCount);
+            log.info("Начат процесс получения {} самых популярных фильмов за {} год в жанре с ID: {}.",
+                    count, year, genreId);
 
-            if (idOfMostPopularFilms.isEmpty()) {
-                log.info("Набор ID у {} самых популярных фильмов пуст.", mostPopularFilmCount);
-            } else if (idOfMostPopularFilms.size() != mostPopularFilmCount) {
-                log.debug("Запрошено {} самых популярных фильмов. В базе найдено {} фильмов с лайками. " +
-                        "Предоставлен набор ID у {} самых популярных фильмов.", mostPopularFilmCount,
-                        idOfMostPopularFilms.size(), mostPopularFilmCount);
-            } else {
-                log.debug("Набор ID у {} самых популярных фильмов успешно предоставлен.", mostPopularFilmCount);
+            List<Film> mostPopularFilms = jdbc.query(querySB, new PreparedStatementSetter() {
+                @Override
+                public void setValues(PreparedStatement ps) throws SQLException {
+                    for (int i = 0; i < params.size(); i++) {
+                        ps.setLong(i + 1, params.get(i));
+                    }
+                }
+            }, mapper);
+
+            if (mostPopularFilms.isEmpty()) {
+                log.info("Список {} самых популярных фильмов за {} год в жанре с ID: {} пуст.", count, year, genreId);
             }
-            return idOfMostPopularFilms;
+            if (mostPopularFilms.size() != count) {
+                log.debug("Запрошено {} самых популярных фильмов за {} год в жанре с ID: {}. " +
+                                "В базе найдено {} фильмов с подходящими параметрами.", count, year, genreId,
+                        mostPopularFilms.size());
+            }
+            log.debug("Список {} самых популярных фильмов за {} год в жанре с ID: {} предоставлен.",
+                        count, year, genreId);
+            return mostPopularFilms;
         } catch (DataAccessException e) {
-            log.error("Неудачная попытка получения ID у {} самых популярных фильмов. --> {}",
-                    mostPopularFilmCount, e.getMessage());
-            throw new DataBaseException("Не удалось получить ID у " + mostPopularFilmCount +
-                    " самых популярных фильмов.");
+            log.error("Неудачная попытка получения списка {} самых популярных фильмов за {} год в жанре с ID: {}." +
+                    " --> {}", count, year, genreId, e.getMessage());
+            throw new DataBaseException("Не удалось получить список самых популярных фильмов.");
         }
     }
 
